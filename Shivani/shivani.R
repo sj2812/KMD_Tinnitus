@@ -43,23 +43,29 @@ View(df)
 
 library(factoextra)
 library(fpc)
+library(RcmdrMisc)
 df[,79] = NULL;
 View(colnames(df))
 
 set.seed(123)
 # Compute and plot wss for k = 2 to k = 15.
 k.max <- 12
-df<-scale(df)
+df_scaled<-scale(df)
+df.cor<-cor(df_scaled)
+View(df.cor)
+
 wss <- sapply(1:k.max, 
-              function(k){kmeans(df, k, nstart=50,iter.max = 15 )$tot.withinss})
+              function(k){kmeans(df_scaled, k, nstart=50,iter.max = 15 )$tot.withinss})
 wss
 plot(1:k.max, wss,
      type="b", pch = 19, frame = FALSE, 
      xlab="Number of clusters K",
      ylab="Total within-clusters sum of squares")
 
-res.hk <-hkmeans(df, 4)
+res.hk <-hkmeans(df_scaled, 4)
 names(res.hk)
 res.hk
-hkmeans_tree(res.hk, cex = 0.6)
+df$cluster<-res.hk$cluster
+View(df)
+hkmeans_tree(res.hk, cex = 0.2)
 fviz_cluster(res.hk, frame.type = "norm", frame.level = 0.68)
