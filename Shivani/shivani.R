@@ -44,15 +44,16 @@ View(df)
 library(factoextra)
 library(fpc)
 library(RcmdrMisc)
-df[,79] = NULL;
-View(colnames(df))
 
-set.seed(123)
-# Compute and plot wss for k = 2 to k = 15.
-k.max <- 12
-df_scaled<-scale(df)
+#correlation between all dimensions
 df.cor<-cor(df_scaled)
 View(df.cor)
+
+
+set.seed(123)
+# Elbow method to get best k from k = 2 to k = 12.
+k.max <- 12
+df_scaled<-scale(df)
 
 wss <- sapply(1:k.max, 
               function(k){kmeans(df_scaled, k, nstart=50,iter.max = 15 )$tot.withinss})
@@ -62,10 +63,18 @@ plot(1:k.max, wss,
      xlab="Number of clusters K",
      ylab="Total within-clusters sum of squares")
 
+#HKmeans implementation
 res.hk <-hkmeans(df_scaled, 4)
 names(res.hk)
+
+#result summary
 res.hk
-df$cluster<-res.hk$cluster
-View(df)
+
+#visualisation
 hkmeans_tree(res.hk, cex = 0.2)
 fviz_cluster(res.hk, frame.type = "norm", frame.level = 0.68)
+
+#appening the created clusterlabels to data fo further work
+df$cluster<-res.hk$cluster
+View(df)
+
