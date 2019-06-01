@@ -41,6 +41,11 @@ test <- df
    }
  }
  
+ print("correlation with 95%")
+ corr_check(test,0.95)
+ print("correlation with 90%")
+ corr_check(test,0.9)
+ print("correlation with 85%")
  corr_check(test, 0.85)
  
 

@@ -19,21 +19,43 @@ When you click the **Knit** button a document will be generated that includes bo
 
 #correlation
 
- corr_check <- function(Dataset, threshold){
-   matriz_cor <- cor(Dataset)
+ corr_check <- function(Dataset, threshold,method_corr){
+   matriz_cor <- cor(Dataset,method = method_corr)
    matriz_cor
    
    for (i in 1:nrow(matriz_cor)){
      correlations <-  which((abs(matriz_cor[i,i:ncol(matriz_cor)]) > threshold) & (matriz_cor[i,i:ncol(matriz_cor)] != 1))
      
      if(length(correlations)> 0){
-       lapply(correlations,FUN =  function(x) (cat(paste(colnames(Dataset)[i], "with",colnames(Dataset)[x]), "\n")))
+       lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(Dataset)[i], "with",colnames(Dataset)[x]), "\n")))
        
      }
    }
  }
+
+cat("PEARSON\n")
+cat("correlation with 95%:\n")
+corr_check(test,0.95,"pearson")
+cat("\ncorrelation with 90%:\n")
+corr_check(test,0.9,"pearson")
+cat("\ncorrelation with 85%:\n")
+corr_check(test, 0.85,"pearson")
  
- corr_check(test, 0.85)
+cat("\nKENDALL\n")
+cat("correlation with 95%:\n")
+corr_check(test,0.95,"kendall")
+cat("\ncorrelation with 90%:\n")
+corr_check(test,0.9,"kendall")
+cat("\ncorrelation with 85%:\n")
+corr_check(test, 0.85,"kendall")
+
+cat("\nSPEARMAN\n")
+cat("correlation with 95%:\n")
+corr_check(test,0.95,"spearman")
+cat("\ncorrelation with 90%:\n")
+corr_check(test,0.9,"spearman")
+cat("\ncorrelation with 85%:\n")
+corr_check(test, 0.85,"spearman")
 
 ```
 
