@@ -1,0 +1,70 @@
+---
+title: "PCA"
+author: "Priyanka"
+date: "26 Mai 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+
+#correlation
+
+ corr_check <- function(Dataset, threshold,method_corr){
+   matriz_cor <- cor(Dataset,method = method_corr)
+   matriz_cor
+   
+   for (i in 1:nrow(matriz_cor)){
+     correlations <-  which((abs(matriz_cor[i,i:ncol(matriz_cor)]) > threshold) & (matriz_cor[i,i:ncol(matriz_cor)] != 1))
+     
+     if(length(correlations)> 0){
+       lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(Dataset)[i], "with",colnames(Dataset)[x]), "\n")))
+       
+     }
+   }
+ }
+
+cat("PEARSON\n")
+cat("correlation with 95%:\n")
+corr_check(test,0.95,"pearson")
+cat("\ncorrelation with 90%:\n")
+corr_check(test,0.9,"pearson")
+cat("\ncorrelation with 85%:\n")
+corr_check(test, 0.85,"pearson")
+ 
+cat("\nKENDALL\n")
+cat("correlation with 95%:\n")
+corr_check(test,0.95,"kendall")
+cat("\ncorrelation with 90%:\n")
+corr_check(test,0.9,"kendall")
+cat("\ncorrelation with 85%:\n")
+corr_check(test, 0.85,"kendall")
+
+cat("\nSPEARMAN\n")
+cat("correlation with 95%:\n")
+corr_check(test,0.95,"spearman")
+cat("\ncorrelation with 90%:\n")
+corr_check(test,0.9,"spearman")
+cat("\ncorrelation with 85%:\n")
+corr_check(test, 0.85,"spearman")
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
