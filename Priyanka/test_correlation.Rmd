@@ -41,7 +41,7 @@ matriz_cor <- cor(test,method = "spearman")
 test2 <- sqldf("Select F1,F2,coef FROM test2 ORDER BY coef DESC")
 test2 <- sqldf("Select F1,F2,coef FROM test2 GROUP BY F2")
 
-test <- select(test,-c(sf8_mcs8,tq_co,tq_tf))
+test <- select(test,-c(test2$F1))
 
 
 ```

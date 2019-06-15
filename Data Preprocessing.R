@@ -67,7 +67,7 @@ correlated_coloumns <- sqldf("Select F1,F2,coef FROM correlated_coloumns GROUP B
 
 
 #droping the columns
-final_data <- select(df_correlation,-c(sf8_mcs8,tq_co,tq_tf))
+final_data <- select(df_correlation,-c(correlated_coloumns$F1))
 
 
 final_data_scaled <- scale(final_data)
