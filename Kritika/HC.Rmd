@@ -19,7 +19,7 @@ library(r2d3)
 We now need to preprocess the data that we will use for creating hierarchical clusters
 ```{r}
 #Data preprocessing
-df <- read_rds("190426_charite_tinnitus.rds") %>%
+df <- read_rds('C:\\Users\\Kritika\\Documents\\SummerSem2019\\KMD Project\\KMD_Tinnitus\\190426_charite_tinnitus.rds') %>%
   arrange(.testdatum) %>%
   group_by(.jour_nr) %>%
   slice(1) %>%
@@ -141,6 +141,6 @@ for(cluster in 1:nrow(cluster_features))
   rownames(cluster_plot_data)<-c("general_mean",cluster_name)
   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
   cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
-  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer = "internal")
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
 }
 ```
