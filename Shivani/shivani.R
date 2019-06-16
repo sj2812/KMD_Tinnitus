@@ -78,3 +78,39 @@ fviz_cluster(res.hk, frame.type = "norm", frame.level = 0.68)
 df$cluster<-res.hk$cluster
 View(df)
 
+#random forest implementation for feature importance detection
+df$cluster <- as.factor(df$cluster)
+library(randomForest)
+iris.rf <- randomForest(formula= cluster ~ ., data=df, importance=TRUE,ntree=500,
+                        proximity=TRUE)
+colarr<-colnames(df)
+colarr
+print(iris.rf)
+plot(iris.rf)
+varImpPlot(iris.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+## Look at variable importance:
+impfeat<-importance(iris.rf)
+impfeatdf<-data.frame(impfeat)
+cluster1<-(impfeatdf$X1)
+cluster2<-impfeatdf$X2
+cluster3<-impfeatdf$X3
+cluster4<-impfeatdf$X4
+
+getimpfeat<-function(clustdf)
+{
+  cimp<-vector()
+  for (i in 1:length (clustdf)){
+    if(clustdf[i]>0){
+      cimp[i]<-colarr[i]
+    }
+  }
+  return(na.omit( cimp))
+}
+print("important features for cluster1 are")
+print(getimpfeat(cluster1))
+print("important features for cluster2 are")
+print(getimpfeat(cluster2))
+print("important features for cluster3 are")
+print(getimpfeat(cluster3))
+print("important features for cluster4 are")
+print(getimpfeat(cluster4))
