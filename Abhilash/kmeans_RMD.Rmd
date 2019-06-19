@@ -11,73 +11,113 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
 ```{r}
+
+
 library(dplyr)
 library(tidyverse)
 library(factoextra)
+library(fpc)
+library(RcmdrMisc)
+library(ggplot2)
+library()
 
-
-scaled_df <- as.data.frame(scale(df))
+scaled_df <- scale(df)
 colMeans(scaled_df)
-summary(scaled_df)
+#summary(scaled_df)
+
+
+#scaled_df <- as.data.frame(scale(df))
+
+```
+
+## Matrix vs Dataframe
+https://www.burns-stat.com/documents/tutorials/impatient-r/#keyobjects
+Atomic types: Numeric, Character, logical, factor
+
+Matrices are of same atomic type, whereas Dataframe can have multiple atomic types in it.
+Matrix rows are vector, Dataframe rows are Dataframe(i.e. List).
+
+https://www.r-bloggers.com/matrix-vs-data-frame-in-r/ - x must be numeric error
+
+
+```{r}
 
 
 #Silhoutte Plot for Elbow method
 fviz_nbclust(scaled_df, kmeans, method = "silhouette", k.max = 8)
 
 
+```
 
-#------#
+```{r}
 
 #https://www.guru99.com/r-k-means-clustering.html 
-set.seed(1234)
+
+
+set.seed(123)
 #Within group SS plot to see how the variations occur with different K values. 
 kmclust_withinss <- function(k){
-  kmclust <- kmeans(scaled_df,k, 10)
+  kmclust <- kmeans(scaled_df,k,nstart=50,iter.max = 10 )
   return(kmclust$tot.withinss)
 }
 
 # Set maximum cluster 
-max_k <-20 
+max_k <-12 
 # Run algorithm over a range of k 
-wss <- sapply(2:max_k, kmclust_withinss)
-
+wss <- sapply(1:max_k, kmclust_withinss)
+# wss <- sapply(2:max_k, 
+#               function(k){kmeans(scaled_df,k, nstart=1,iter.max = 15 )$tot.withinss})
+wss
 # Create a data frame to plot the graph
-elbow <-data.frame(2:max_k, wss)
-  
-# Plot the graph with gglop
-ggplot(elbow, aes(x = X2.max_k, y = wss)) +
-  geom_point() +
-  geom_line() +
-  scale_x_continuous(breaks = seq(1, 20, by = 1))
+# elbow <-data.frame(1:max_k, wss)
+#   
+# # Plot the graph with gglop
+# ggplot(elbow, aes(x = X2.max_k, y = wss)) +
+#   geom_point() +
+#   geom_line() +
+#   scale_x_continuous(breaks = seq(1, 20, by = 1))
 
 
-#------#
+wss
+plot(1:max_k, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+
+```
+
+
+```{r}
+
 #https://bookdown.org/rdpeng/exdata/k-means-clustering.html 
 
-set.seed(1234)
+library(RColorBrewer)
+library(gplots) #heatmap.2
+
+set.seed(123)
 kcenters <- c(2,7,11)
 
+#par(mfrow = c(1, 2)) #For 2 plots side by side
+image(t(scaled_df)[, nrow(scaled_df):1],col = hcl.colors(5, "Spectral", rev = TRUE), yaxt = "n", xlab = "s", main = paste("Original Data"))
 
-image(t(scaled_df)[, nrow(scaled_df):1], yaxt = "n", main = paste("Original Data"))
-image(t(scaled_df_mat)[, nrow(scaled_df_mat):1], yaxt = "n", main = paste("Original Data_matrix"))
+
+hmcols<- colorRampPalette(brewer.pal(9,"GnBu"))(100)
 
 
 for(k in kcenters){
-scaled_df_mat <- scale(df)
 
 kmclust <- kmeans(scaled_df,k, 10)
-kmclust_mat <- kmeans(scaled_df_mat,k, 10)
-
 image(t(scaled_df)[, order(kmclust$cluster)], yaxt = "n", main = paste("Clustered Data k=",k))
-image(t(scaled_df_mat)[, order(kmclust_mat$cluster)], yaxt = "n", main = paste("Clustered Data_matrix k=",k))
+heatmap.2(scaled_df, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
+
 }
 
-#------#
+```
+
+
+```{r}
+
 
 #HEATMAP to highlight difference between feature values wrt each cluster
 
@@ -95,7 +135,7 @@ center_df <- data.frame(cluster, center)
 
 center_reshape <- gather(center_df, features, values, .jour_nr: tlq_tlq02_4)
 head(center_reshape)
-
+  
 #conda install -c r r-rcolorbrewer : in cmd
 library(RColorBrewer)
 
@@ -111,18 +151,110 @@ ggplot(data = center_reshape, aes(x = features, y = cluster, fill = values)) +
   theme_classic()
 
 
-#------#
+```
 
+```{r}
+#https://rpkgs.datanovia.com/factoextra/reference/fviz_cluster.html
 
+km <- kmeans(scaled_df,4, nstart=50,iter.max = 15)
+fviz_cluster(km, scaled_df, frame.type = "norm", frame.level = 0.68)
 
-
-
+fviz_cluster(kmclust, scaled_df, frame.type = "norm", frame.level = 0.68)
 
 ```
 
-## Including Plots
+```{r}
 
-You can also embed plots, for example:
+library(fpc)
+
+#Bootstrapping
+
+km.boot <- clusterboot(scaled_df, B=20, bootmethod="boot",
+                       clustermethod=kmeansCBI,
+                       krange=10, seed=123)
+
+
+# 
+# sim.xy <- function(n, mean, sd) cbind(rnorm(n, mean[1], sd[1]),
+# rnorm(n, mean[2],sd[2]))
+# xy <- rbind(sim.xy(100, c(0,0), c(.2,.2)),
+#             sim.xy(100, c(2.5,0), c(.4,.2)),
+#             sim.xy(100, c(1.25,.5), c(.3,.2)))
+# library(fpc)
+# km.boot <- clusterboot(xy, B=20, bootmethod="boot",
+#                        clustermethod=kmeansCBI,
+#                        krange=3, seed=15555)
+
+
+# plot(km.boot$result$result)
+# km.boot
+# km.boot$result$result
+
+
+
+set.seed(123)
+#Within group SS plot to see how the variations occur with different K values. 
+kmclust_withinss <- function(k){
+km.boot <- clusterboot(scaled_df, B=20, bootmethod="boot",
+                       clustermethod=kmeansCBI,
+                       krange=k, seed=1455)
+  return(km.boot$result$result$tot.withinss)
+}
+
+# Set maximum cluster 
+max_k <-12 
+# Run algorithm over a range of k 
+wss.boot <- sapply(2:max_k, kmclust_withinss)
+
+wss
+plot(2:max_k, wss.boot,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+
+```
+
+```{r}
+
+library(boot)
+
+y1 <- matrix( round(rnorm(25,5)), ncol=5)
+y1
+y1[2,1] 
+
+
+y2 <- matrix( round(rnorm(40, 5)), ncol=5)
+y2
+
+
+bootsam <- lapply(1:nrow(y2), function(i){y2[sample(y2,ncol(y2), replace = T)]})
+y2
+bootsam1 <- matrix(unlist(bootsam), ncol = ncol(y2), byrow =TRUE)
+bootsam1
+
+bootsample <- lapply(1:nrow(scaled_df), function(i){scaled_df[sample(scaled_df, ncol(scaled_df), replace = T)]})
+y2
+bootsample1 <- matrix(unlist(bootsam), ncol = ncol(scaled_df), byrow =TRUE)
+bootsample1
+
+
+
+set.seed(123)
+func <- function(data, i){
+  
+  d2 <- data[i,]
+  
+}
+
+bootsample2 <- boot(scaled_df,func, R=10)
+bootdata <- bootsample2$t0
+bootdata1 <- bootsample2$t
+bootdata11 <- bootsample2$t[1,]
+bootdata111 <-  matrix(unlist(bootdata11), ncol = ncol(scaled_df), byrow =TRUE)
+
+```
+
+
 
 ```{r}
 
