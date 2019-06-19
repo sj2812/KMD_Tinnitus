@@ -14,11 +14,12 @@ library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
 library(factoextra) # clustering visualization
 library(dendextend) # for comparing two dendrograms
+library(r2d3)
 ```
 We now need to preprocess the data that we will use for creating hierarchical clusters
 ```{r}
 #Data preprocessing
-df <- read_rds("190426_charite_tinnitus.rds") %>%
+df <- read_rds('C:\\Users\\Kritika\\Documents\\SummerSem2019\\KMD Project\\KMD_Tinnitus\\190426_charite_tinnitus.rds') %>%
   arrange(.testdatum) %>%
   group_by(.jour_nr) %>%
   slice(1) %>%
@@ -112,4 +113,34 @@ Let us now label all our records with the respective cluster number.
 df_labeled<-df%>%
   mutate(label = sub_group)
 df_labeled%>%head
+```
+```{r}
+df_grouped<-df_labeled%>%
+  group_by(label)
+df_split<-group_split(df_grouped)
+
+```
+
+```{r}
+cluster_features<-data.frame(df_labeled%>%
+                               select(-.jour_nr)%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df%>%
+                               select(-.jour_nr)%>%
+                               summarise_each(mean))
+
+```
+
+```{r}
+options(scipen = 999)
+for(cluster in 1:nrow(cluster_features))
+{
+  cluster_plot_data<-rbind(feature_summary,cluster_features[cluster,-1])
+  cluster_name<-paste("cluster_",cluster_features[cluster,1])
+  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+}
 ```

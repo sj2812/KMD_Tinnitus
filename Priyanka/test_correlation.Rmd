@@ -16,46 +16,33 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r}
-
+library(sqldf)
+library(dplyr)
 #correlation
+test <- select(df,-c(.jour_nr))
+test2 <- data.frame(F1 = character(),F2 = character(),coef = numeric())
 
- corr_check <- function(Dataset, threshold,method_corr){
-   matriz_cor <- cor(Dataset,method = method_corr)
-   matriz_cor
-   
+
+cat("\ncorrelation with 90%:\n")
+matriz_cor <- cor(test,method = "spearman")
+
    for (i in 1:nrow(matriz_cor)){
-     correlations <-  which((abs(matriz_cor[i,i:ncol(matriz_cor)]) > threshold) & (matriz_cor[i,i:ncol(matriz_cor)] != 1))
+     correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
+     matriz_cor[correlations,i] <- NA
      
      if(length(correlations)> 0){
-       lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(Dataset)[i], "with",colnames(Dataset)[x]), "\n")))
-       
+       lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
+       test2 <-  rbind(test2,data.frame(F1=colnames(test)[i],F2=colnames(test)[correlations],coef=matriz_cor[i,correlations]))
+       rownames(test2) <- NULL
      }
    }
- }
 
-cat("PEARSON\n")
-cat("correlation with 95%:\n")
-corr_check(test,0.95,"pearson")
-cat("\ncorrelation with 90%:\n")
-corr_check(test,0.9,"pearson")
-cat("\ncorrelation with 85%:\n")
-corr_check(test, 0.85,"pearson")
- 
-cat("\nKENDALL\n")
-cat("correlation with 95%:\n")
-corr_check(test,0.95,"kendall")
-cat("\ncorrelation with 90%:\n")
-corr_check(test,0.9,"kendall")
-cat("\ncorrelation with 85%:\n")
-corr_check(test, 0.85,"kendall")
 
-cat("\nSPEARMAN\n")
-cat("correlation with 95%:\n")
-corr_check(test,0.95,"spearman")
-cat("\ncorrelation with 90%:\n")
-corr_check(test,0.9,"spearman")
-cat("\ncorrelation with 85%:\n")
-corr_check(test, 0.85,"spearman")
+test2 <- sqldf("Select F1,F2,coef FROM test2 ORDER BY coef DESC")
+test2 <- sqldf("Select F1,F2,coef FROM test2 GROUP BY F2")
+
+test <- select(test,-c(test2$F1))
+
 
 ```
 
