@@ -1,0 +1,41 @@
+library(ggplot2)
+library(Rtsne)
+
+ProClus.clusters.k2 <- ProClus(final_data,k=2)
+
+
+#identify the row ID for samples in each cluster (e.g. ProClus2[[1]]$objects identifies cluster 1
+#rowIDs)
+rows.2.1<-ProClus.clusters.k2[[1]]$objects
+rows.2.2<-ProClus.clusters.k2[[2]]$objects
+
+
+#subset the same rows from the original data file
+proclus2.1<-cbind(final_data[c(rows.2.1),c(1:4)],"Cluster"=1)
+proclus2.2<-cbind(final_data[c(rows.2.2),c(1:4)],"Cluster"=2)
+
+
+#create a new data.frame that contains the clusters
+ProClus.2.df<- rbind(proclus2.1,proclus2.2)
+ProClus.2.df$Cluster<-as.factor(ProClus.2.df$Cluster)
+
+
+#Perform a tSNE analysis to create a 2D representation of the data
+my.proclus.tSNE <- data.frame()
+my.proclus.tSNE<-Rtsne(final_data, dims = 3 , perplexity=25, verbose=TRUE, max_iter = 5000)
+
+
+#Plot the 2 Clusters and set each cluster to a different colour
+colours.clus2<-c("#FF0000","#0000FF")
+colours.clus2.all <- colours.clus2[as.numeric(ProClus.2.df$Cluster)]
+cols2 <- c("1" = "#FF0000", "2" = "#0000FF")
+
+
+#Visualize the clusters using the tSNE plot
+ggplot(my.proclus.tSNE, aes(V1, V2)) +
+theme(axis.text.x=element_blank(),axis.ticks.x=element_blank(),axis.text.y=element_blank(),axis.ticks.y=element_blank(),panel.background = element_rect(fill = NA, colour = "white"),panel.border =
+element_blank(), axis.line = element_line(),legend.direction="vertical",legend.position = c(0.1,0.8),legend.background =element_rect(fill = NA, colour = NA), legend.title.align=0.5)+
+ labs(x="V1",y="V2")+
+ geom_point(data=proclus2.1,colour="#FF0000",size=8,aes(V1,V2))+
+ geom_point(data=proclus2.2,colour="#0000FF",size=7,aes(V1,V2))+
+ geom_point(size=1,shape=20,colour="black")
