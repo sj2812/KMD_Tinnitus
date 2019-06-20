@@ -50,8 +50,31 @@ test <- select(test,-c(test2$F1))
 
 You can also embed plots, for example:
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r}
+#subspace clustering
+library(orclus)
+library(subspace)
+library(ggvis)
+
+subspace_data <- final_data_scaled
+
+
+k.max <- 12
+
+wss <- sapply(1:k.max, 
+              function(k){kmeans(subspace_data, k, nstart=50,iter.max = 15 )$tot.withinss})
+#wss
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+
+orclus.res <- orclus(x = subspace_data,k = 4,l = 75,10,a = 0.5)
+plot(subspace_data,col = orclus.res$cluster)
+
+plot
+
+
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

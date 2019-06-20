@@ -62,12 +62,10 @@ for (i in 1:nrow(matriz_cor)){
     rownames(correlated_coloumns) <- NULL
   }
 }
-correlated_coloumns <- sqldf("Select F1,F2,coef FROM correlated_coloumns ORDER BY coef DESC")
-correlated_coloumns <- sqldf("Select F1,F2,coef FROM correlated_coloumns GROUP BY F2")
 
 
 #droping the columns
-final_data <- select(df_correlation,-c(correlated_coloumns$F1))
+final_data <- select(df_correlation,-c("sf8_mcs8","tq_pb"))
 
 
 final_data_scaled <- scale(final_data)
