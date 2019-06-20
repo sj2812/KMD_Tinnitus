@@ -248,89 +248,47 @@ apply(cluster_features,1,f)
 ```
 
 
-
-
-
 Now we will create bootstrap samples to see if the selected k values are good or not depending on different sets of data (with replacement).
 
 
-
-
 ```{r}
+#https://www.dummies.com/programming/r/how-to-take-samples-from-data-in-r/ 
+#https://stackoverflow.com/questions/31862933/storing-loop-output-in-a-dataframe-in-r
 
-library(fpc)
-
-#Bootstrapping
-
-# km.boot <- clusterboot(df_scaled_uncorr, B=20, bootmethod="boot",
-#                        clustermethod=kmeansCBI,
-#                        krange=10, seed=123)
+bootsamplesize <- seq(1:100)
+max_k <-seq(1:12) 
+wss.boot <- data.frame()
 
 
-set.seed(123)
-#Within group SS plot to see how the variations occur with different K values. 
-kmclust_withinss <- function(k){
-km.boot <- clusterboot(df_scaled_uncorr, B=20, bootmethod="boot",
-                       clustermethod=kmeansCBI,
-                       krange=k, seed=1455)
-  return(km.boot$result$result$tot.withinss)
+for(i in bootsamplesize){
+
+  #Create Index with replacement
+  index <- sample(1:nrow(df_scaled_uncorr),nrow(df_scaled_uncorr),replace = T)
+  
+  #create samples from the index
+  dfSample <-  df_scaled_uncorr[index,]
+    
+  #run for each value of k for the current sample  
+  for(k in max_k){
+      
+    kmclust <- kmeans(dfSample,k,nstart=50,iter.max = 25)
+    
+    #Store the data (1 row) of current K and withinss in the dataframe  
+    wss.boot <- rbind(wss.boot, c(k,kmclust$tot.withinss))
+    
+  }
 }
 
-# Set maximum cluster 
-max_k <- 12 
-
-
-# Run algorithm over a range of k 
-wss.boot <- sapply(2:max_k, kmclust_withinss)
-#clusterboot works min from 2 clusters only
-
-#line plot
-plot(2:max_k, wss.boot,
-     type="b", pch = 19, frame = FALSE, 
-     xlab="Number of clusters K",
-     ylab="Total within-clusters sum of squares")
-
-
+colnames(wss.boot) <- c('k','totwss')
 
 ```
 
+
+Plot the withinss data for k=1:12 and Bootsamples = 1:100
+
 ```{r}
 
-library(boot)
-
-y1 <- matrix( round(rnorm(25,5)), ncol=5)
-y1
-y1[2,1] 
-
-
-y2 <- matrix( round(rnorm(40, 5)), ncol=5)
-y2
-
-
-bootsam <- lapply(1:nrow(y2), function(i){y2[sample(y2,ncol(y2), replace = T)]})
-y2
-bootsam1 <- matrix(unlist(bootsam), ncol = ncol(y2), byrow =TRUE)
-bootsam1
-
-bootsample <- lapply(1:nrow(df_scaled_uncorr), function(i){df_scaled_uncorr[sample(df_scaled_uncorr, ncol(df_scaled_uncorr), replace = T)]})
-y2
-bootsample1 <- matrix(unlist(bootsam), ncol = ncol(df_scaled_uncorr), byrow =TRUE)
-bootsample1
-
-
-
-set.seed(123)
-func <- function(data, i){
-  
-  d2 <- data[i,]
-  
-}
-
-bootsample2 <- boot(df_scaled_uncorr,func, R=10)
-bootdata <- bootsample2$t0
-bootdata1 <- bootsample2$t
-bootdata11 <- bootsample2$t[1,]
-bootdata111 <-  matrix(unlist(bootdata11), ncol = ncol(df_scaled_uncorr), byrow =TRUE)
+boxplot(totwss~k, data = wss.boot, xlab = "k", ylab = "totwss", main = "Bootsampled Data: Cluster withinss")
 
 ```
 
@@ -345,4 +303,3 @@ bootdata111 <-  matrix(unlist(bootdata11), ncol = ncol(df_scaled_uncorr), byrow 
 
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
