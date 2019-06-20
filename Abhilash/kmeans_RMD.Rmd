@@ -20,10 +20,9 @@ library(factoextra)
 library(fpc)
 library(RcmdrMisc)
 library(ggplot2)
-library()
 
 scaled_df <- scale(df)
-colMeans(scaled_df)
+#colMeans(scaled_df)
 #summary(scaled_df)
 
 
@@ -66,18 +65,7 @@ kmclust_withinss <- function(k){
 max_k <-12 
 # Run algorithm over a range of k 
 wss <- sapply(1:max_k, kmclust_withinss)
-# wss <- sapply(2:max_k, 
-#               function(k){kmeans(scaled_df,k, nstart=1,iter.max = 15 )$tot.withinss})
 wss
-# Create a data frame to plot the graph
-# elbow <-data.frame(1:max_k, wss)
-#   
-# # Plot the graph with gglop
-# ggplot(elbow, aes(x = X2.max_k, y = wss)) +
-#   geom_point() +
-#   geom_line() +
-#   scale_x_continuous(breaks = seq(1, 20, by = 1))
-
 
 wss
 plot(1:max_k, wss,
@@ -96,10 +84,11 @@ library(RColorBrewer)
 library(gplots) #heatmap.2
 
 set.seed(123)
-kcenters <- c(2,7,11)
+kcenters <- c(2,4,7,11)
 
 #par(mfrow = c(1, 2)) #For 2 plots side by side
-image(t(scaled_df)[, nrow(scaled_df):1],col = hcl.colors(5, "Spectral", rev = TRUE), yaxt = "n", xlab = "s", main = paste("Original Data"))
+
+image(t(scaled_df)[, nrow(scaled_df):1],col = hcl.colors(5, "Spectral", rev = TRUE), yaxt = "n", ylab = "row  order",xlab = "Heatmap values of rows", main = paste("Original Data"))
 
 
 hmcols<- colorRampPalette(brewer.pal(9,"GnBu"))(100)
@@ -107,9 +96,13 @@ hmcols<- colorRampPalette(brewer.pal(9,"GnBu"))(100)
 
 for(k in kcenters){
 
-kmclust <- kmeans(scaled_df,k, 10)
-image(t(scaled_df)[, order(kmclust$cluster)], yaxt = "n", main = paste("Clustered Data k=",k))
-heatmap.2(scaled_df, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
+  set.seed(123)
+  kmclust <- kmeans(scaled_df,k, 10)
+  #image(t(scaled_df)[, order(kmclust$cluster)], yaxt = "n", main = paste("Clustered Data k=",k))
+  image(t(scaled_df)[, order(kmclust$cluster)], col = hcl.colors(5, "Spectral", rev = TRUE), yaxt = "n", ylab = "row  order",xlab = "Heatmap values of rows", main = paste("Clustered Data k=",k))
+
+
+#heatmap.2(scaled_df, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
 
 }
 
@@ -123,33 +116,41 @@ heatmap.2(scaled_df, kmclust, col=hmcols, trace= "none", main = paste("Clustered
 
 library(tidyr)
 
-#centers
-center <- kmclust$centers
-
-# create dataset with the cluster number
-
-cluster <- c(1: 11)
-center_df <- data.frame(cluster, center)
-
-# Reshape the data
-
-center_reshape <- gather(center_df, features, values, .jour_nr: tlq_tlq02_4)
-head(center_reshape)
-  
 #conda install -c r r-rcolorbrewer : in cmd
 library(RColorBrewer)
+    
 
-# Create the palette
-hm.palette <-colorRampPalette(rev(brewer.pal(10, 'RdYlGn')),space='Lab')
+set.seed(123)
+kcenters <- c(3,4,7,11)
 
-#Plot the heat map
-ggplot(data = center_reshape, aes(x = features, y = cluster, fill = values)) +
-  scale_y_continuous(breaks = seq(1, 11, by = 1)) +
-  geom_tile() +
-  coord_equal() +
-  scale_fill_gradientn(colours = hm.palette(90)) +
-  theme_classic()
+for (k in kcenters){
 
+    kmclust <- kmeans(scaled_df,k,nstart=50,iter.max = 10)
+      
+    #centers
+    center <- kmclust$centers
+    
+    # create dataset with the cluster number
+    
+    cluster <- c(1:k)
+    center_df <- data.frame(cluster, center)
+    
+    # Reshape the data
+    
+    center_reshape <- gather(center_df, features, values, .jour_nr: tlq_tlq02_4)
+    #head(center_reshape)
+      
+    # Create the palette
+    hm.palette <-colorRampPalette(rev(brewer.pal(10, 'RdYlGn')),space='Lab')
+    
+    #Plot the heat map
+    ggplot(data = center_reshape, aes(x = features, y = cluster, fill = values)) +
+      scale_y_continuous(breaks = seq(1, k, by = 1)) +
+      geom_tile() +
+      coord_equal() +
+      scale_fill_gradientn(colours = hm.palette(90)) +
+      theme_classic()
+}
 
 ```
 
@@ -174,21 +175,6 @@ km.boot <- clusterboot(scaled_df, B=20, bootmethod="boot",
                        krange=10, seed=123)
 
 
-# 
-# sim.xy <- function(n, mean, sd) cbind(rnorm(n, mean[1], sd[1]),
-# rnorm(n, mean[2],sd[2]))
-# xy <- rbind(sim.xy(100, c(0,0), c(.2,.2)),
-#             sim.xy(100, c(2.5,0), c(.4,.2)),
-#             sim.xy(100, c(1.25,.5), c(.3,.2)))
-# library(fpc)
-# km.boot <- clusterboot(xy, B=20, bootmethod="boot",
-#                        clustermethod=kmeansCBI,
-#                        krange=3, seed=15555)
-
-
-# plot(km.boot$result$result)
-# km.boot
-# km.boot$result$result
 
 
 
