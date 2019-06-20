@@ -74,6 +74,17 @@ plot(1:max_k, wss,
      ylab="Total within-clusters sum of squares")
 
 ```
+Depending on the previous results, lets define the possible values of K that we want to check and perform our clustering on.
+
+```{r}
+
+kcenters <- c(2,4,7)
+
+
+```
+
+
+Let's plot the heat map of the data for unclustered and clustered data. Clustered data are ordered according to the cluster allotment with the help of order. Therefore the rows get ordered according to their cluster assignment, so that all the rows are grouped together.
 
 
 ```{r}
@@ -84,11 +95,14 @@ library(RColorBrewer)
 library(gplots) #heatmap.2
 
 set.seed(123)
-kcenters <- c(2,4,7,11)
 
 #par(mfrow = c(1, 2)) #For 2 plots side by side
 
-image(t(scaled_df)[, nrow(scaled_df):1],col = hcl.colors(5, "Spectral", rev = TRUE), yaxt = "n", ylab = "row  order",xlab = "Heatmap values of rows", main = paste("Original Data"))
+image(t(scaled_df)[, nrow(scaled_df):1],
+      col = hcl.colors(5, "Spectral", rev = TRUE),
+      yaxt = "n", 
+      ylab = "row  order",xlab = "Heatmap values of rows", 
+      main = paste("Original Data"))
 
 
 hmcols<- colorRampPalette(brewer.pal(9,"GnBu"))(100)
@@ -97,9 +111,13 @@ hmcols<- colorRampPalette(brewer.pal(9,"GnBu"))(100)
 for(k in kcenters){
 
   set.seed(123)
-  kmclust <- kmeans(scaled_df,k, 10)
-  #image(t(scaled_df)[, order(kmclust$cluster)], yaxt = "n", main = paste("Clustered Data k=",k))
-  image(t(scaled_df)[, order(kmclust$cluster)], col = hcl.colors(5, "Spectral", rev = TRUE), yaxt = "n", ylab = "row  order",xlab = "Heatmap values of rows", main = paste("Clustered Data k=",k))
+  kmclust <- kmeans(scaled_df,k, nstart = 50, 10)
+  
+  image(t(scaled_df)[, order(kmclust$cluster)], 
+        col = hcl.colors(5, "Spectral", rev = TRUE), 
+        yaxt = "n", 
+        ylab = "row  order",xlab = "Heatmap values of rows", 
+        main = paste("Clustered Data k=",k))
 
 
 #heatmap.2(scaled_df, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
@@ -109,59 +127,69 @@ for(k in kcenters){
 ```
 
 
+
+
+
 ```{r}
 
+#https://www.guru99.com/r-k-means-clustering.html 
 
 #HEATMAP to highlight difference between feature values wrt each cluster
 
+#The values are the average score by each cluster for the interested column. - Cluster means 
+
 library(tidyr)
 
-#conda install -c r r-rcolorbrewer : in cmd
-library(RColorBrewer)
-    
 
-set.seed(123)
-kcenters <- c(3,4,7,11)
+set.seed(12354)
 
 for (k in kcenters){
 
-    kmclust <- kmeans(scaled_df,k,nstart=50,iter.max = 10)
-      
-    #centers
-    center <- kmclust$centers
-    
-    # create dataset with the cluster number
-    
-    cluster <- c(1:k)
-    center_df <- data.frame(cluster, center)
-    
-    # Reshape the data
-    
-    center_reshape <- gather(center_df, features, values, .jour_nr: tlq_tlq02_4)
-    #head(center_reshape)
-      
-    # Create the palette
-    hm.palette <-colorRampPalette(rev(brewer.pal(10, 'RdYlGn')),space='Lab')
-    
-    #Plot the heat map
+kmclust <- kmeans(scaled_df,k,iter.max = 10)
+
+print(paste("Cluster Sizes for k=",k))
+#print(table(kmclust$size))
+print(table(kmclust$cluster))
+print("------------")
+
+#centers
+center <- kmclust$centers
+# create dataset with the cluster number
+cluster <- c(1: k)
+center_df <- data.frame(cluster, center)
+# Reshape the data
+center_reshape <- gather(center_df, features, values, .jour_nr: tlq_tlq02_4)
+head(center_reshape)
+  
+#conda install -c r r-rcolorbrewer : in cmd
+library(RColorBrewer)
+# Create the palette
+hm.palette <-colorRampPalette(rev(brewer.pal(10, 'RdYlGn')),space='Lab')
+#Plot the heat map
+
+print(
     ggplot(data = center_reshape, aes(x = features, y = cluster, fill = values)) +
       scale_y_continuous(breaks = seq(1, k, by = 1)) +
       geom_tile() +
       coord_equal() +
       scale_fill_gradientn(colours = hm.palette(90)) +
-      theme_classic()
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5),
+          axis.text.y = element_text())
+    )
 }
-
 ```
+
+Check the visualisation of the Kmeans result in the 2 Dimension space with the help of fviz_clust
+
 
 ```{r}
 #https://rpkgs.datanovia.com/factoextra/reference/fviz_cluster.html
 
-km <- kmeans(scaled_df,4, nstart=50,iter.max = 15)
-fviz_cluster(km, scaled_df, frame.type = "norm", frame.level = 0.68)
 
-fviz_cluster(kmclust, scaled_df, frame.type = "norm", frame.level = 0.68)
-
+for (k in kcenters){
+km <- kmeans(scaled_df,k, nstart=50,iter.max = 15)
+print(fviz_cluster(km, scaled_df, ellipse.type  = "norm", ellipse.level = 0.68))
+}
 ```
 
 ```{r}
@@ -170,12 +198,9 @@ library(fpc)
 
 #Bootstrapping
 
-km.boot <- clusterboot(scaled_df, B=20, bootmethod="boot",
-                       clustermethod=kmeansCBI,
-                       krange=10, seed=123)
-
-
-
+# km.boot <- clusterboot(scaled_df, B=20, bootmethod="boot",
+#                        clustermethod=kmeansCBI,
+#                        krange=10, seed=123)
 
 
 set.seed(123)
@@ -188,15 +213,20 @@ km.boot <- clusterboot(scaled_df, B=20, bootmethod="boot",
 }
 
 # Set maximum cluster 
-max_k <-12 
+max_k <- 12 
+
+
 # Run algorithm over a range of k 
 wss.boot <- sapply(2:max_k, kmclust_withinss)
+#clusterboot works min from 2 clusters only
 
-wss
+#line plot
 plot(2:max_k, wss.boot,
      type="b", pch = 19, frame = FALSE, 
      xlab="Number of clusters K",
      ylab="Total within-clusters sum of squares")
+
+
 
 ```
 
