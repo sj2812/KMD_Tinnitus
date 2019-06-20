@@ -263,10 +263,10 @@ wss.boot <- data.frame()
 for(i in bootsamplesize){
 
   #Create Index with replacement
-  index <- sample(1:nrow(df_scaled_uncorr),nrow(df_scaled_uncorr),replace = T)
+  index <- sample(1:nrow(df_scaled),nrow(df_scaled),replace = T)
   
   #create samples from the index
-  dfSample <-  df_scaled_uncorr[index,]
+  dfSample <-  df_scaled[index,]
   
   #run for each value of k for the current sample  
   for(k in max_k){
