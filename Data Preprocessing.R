@@ -63,6 +63,13 @@ for (i in 1:nrow(matriz_cor)){
   }
 }
 
+library(corrr)
+#library(PerformanceAnalytics)
+
+#chart.Correlation(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman",histogram = TRUE,pch = 19)
+
+network_plot(correlate(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman"))
+
 
 #droping the columns
 final_data <- select(df_correlation,-c("sf8_mcs8","tq_pb"))
