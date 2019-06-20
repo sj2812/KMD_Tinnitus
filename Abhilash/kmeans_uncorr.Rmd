@@ -9,7 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
 ```{r}
 
@@ -21,12 +20,6 @@ library(fpc)
 library(RcmdrMisc)
 library(ggplot2)
 
-scaled_df <- scale(df)
-#colMeans(scaled_df)
-#summary(scaled_df)
-
-
-#scaled_df <- as.data.frame(scale(df))
 
 ```
 
@@ -44,7 +37,7 @@ https://www.r-bloggers.com/matrix-vs-data-frame-in-r/ - x must be numeric error
 
 
 #Silhoutte Plot for Elbow method
-fviz_nbclust(scaled_df, kmeans, method = "silhouette", k.max = 8)
+fviz_nbclust(df_scaled_uncorr, kmeans, method = "silhouette", k.max = 8)
 
 
 ```
@@ -57,7 +50,7 @@ fviz_nbclust(scaled_df, kmeans, method = "silhouette", k.max = 8)
 set.seed(123)
 #Within group SS plot to see how the variations occur with different K values. 
 kmclust_withinss <- function(k){
-  kmclust <- kmeans(scaled_df,k,nstart=50,iter.max = 10 )
+  kmclust <- kmeans(df_scaled_uncorr,k,nstart=50,iter.max = 10 )
   return(kmclust$tot.withinss)
 }
 
@@ -79,6 +72,7 @@ Depending on the previous results, lets define the possible values of K that we 
 ```{r}
 
 kcenters <- c(2,4,7)
+kcenters
 
 
 ```
@@ -98,7 +92,7 @@ set.seed(123)
 
 #par(mfrow = c(1, 2)) #For 2 plots side by side
 
-image(t(scaled_df)[, nrow(scaled_df):1],
+image(t(df_scaled_uncorr)[, nrow(df_scaled_uncorr):1],
       col = hcl.colors(5, "Spectral", rev = TRUE),
       yaxt = "n", 
       ylab = "row  order",xlab = "Heatmap values of rows", 
@@ -111,16 +105,16 @@ hmcols<- colorRampPalette(brewer.pal(9,"GnBu"))(100)
 for(k in kcenters){
 
   set.seed(123)
-  kmclust <- kmeans(scaled_df,k, nstart = 50, 10)
+  kmclust <- kmeans(df_scaled_uncorr,k, nstart = 50, 10)
   
-  image(t(scaled_df)[, order(kmclust$cluster)], 
+  image(t(df_scaled_uncorr)[, order(kmclust$cluster)], 
         col = hcl.colors(5, "Spectral", rev = TRUE), 
         yaxt = "n", 
         ylab = "row  order",xlab = "Heatmap values of rows", 
         main = paste("Clustered Data k=",k))
 
 
-#heatmap.2(scaled_df, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
+#heatmap.2(df_scaled_uncorr, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
 
 }
 
@@ -145,7 +139,7 @@ set.seed(12354)
 
 for (k in kcenters){
 
-kmclust <- kmeans(scaled_df,k,iter.max = 10)
+kmclust <- kmeans(df_scaled_uncorr,k,iter.max = 10)
 
 print(paste("Cluster Sizes for k=",k))
 #print(table(kmclust$size))
@@ -179,6 +173,7 @@ print(
 }
 ```
 
+
 Check the visualisation of the Kmeans result in the 2 Dimension space with the help of fviz_clust
 
 
@@ -187,10 +182,79 @@ Check the visualisation of the Kmeans result in the 2 Dimension space with the h
 
 
 for (k in kcenters){
-km <- kmeans(scaled_df,k, nstart=50,iter.max = 15)
-print(fviz_cluster(km, scaled_df, ellipse.type  = "norm", ellipse.level = 0.68))
+kmclust <- kmeans(df_scaled_uncorr,k, nstart=50,iter.max = 15)
+print(fviz_cluster(kmclust, df_scaled_uncorr, ellipse.type  = "norm", ellipse.level = 0.68))
 }
 ```
+
+
+Assigning the rows their cluster numbers
+
+
+```{r}
+
+kmclust <- kmeans(df_scaled_uncorr,4, nstart=50,iter.max = 15)
+
+klabels <- kmclust$cluster
+head(klabels, n = 50)
+```
+
+
+```{r}
+
+df_labeled <- df%>%
+  mutate(label = klabels)
+df_labeled%>%head
+
+```
+
+Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
+```{r}
+df_grouped<-df_labeled%>%
+  group_by(label)
+df_split<-group_split(df_grouped)
+
+```
+
+The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
+Also calculating the general population summary for each feature as "feature summary".
+```{r}
+cluster_features<-data.frame(df_labeled%>%
+                               select(-.jour_nr)%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df%>%
+                               select(-.jour_nr)%>%
+                               summarise_each(mean))
+
+```
+
+
+Finally creating a data frame which can be used for the visualization.
+The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
+```{r echo=TRUE}
+options(scipen = 999)
+
+f<-function(cluster)
+ { cluster_plot_data<-rbind(feature_summary,cluster[-1])
+  cluster_name<-paste("cluster_",cluster[1])
+  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+}
+apply(cluster_features,1,f)
+
+```
+
+
+
+
+
+Now we will create bootstrap samples to see if the selected k values are good or not depending on different sets of data (with replacement).
+
+
+
 
 ```{r}
 
@@ -198,7 +262,7 @@ library(fpc)
 
 #Bootstrapping
 
-# km.boot <- clusterboot(scaled_df, B=20, bootmethod="boot",
+# km.boot <- clusterboot(df_scaled_uncorr, B=20, bootmethod="boot",
 #                        clustermethod=kmeansCBI,
 #                        krange=10, seed=123)
 
@@ -206,7 +270,7 @@ library(fpc)
 set.seed(123)
 #Within group SS plot to see how the variations occur with different K values. 
 kmclust_withinss <- function(k){
-km.boot <- clusterboot(scaled_df, B=20, bootmethod="boot",
+km.boot <- clusterboot(df_scaled_uncorr, B=20, bootmethod="boot",
                        clustermethod=kmeansCBI,
                        krange=k, seed=1455)
   return(km.boot$result$result$tot.withinss)
@@ -248,9 +312,9 @@ y2
 bootsam1 <- matrix(unlist(bootsam), ncol = ncol(y2), byrow =TRUE)
 bootsam1
 
-bootsample <- lapply(1:nrow(scaled_df), function(i){scaled_df[sample(scaled_df, ncol(scaled_df), replace = T)]})
+bootsample <- lapply(1:nrow(df_scaled_uncorr), function(i){df_scaled_uncorr[sample(df_scaled_uncorr, ncol(df_scaled_uncorr), replace = T)]})
 y2
-bootsample1 <- matrix(unlist(bootsam), ncol = ncol(scaled_df), byrow =TRUE)
+bootsample1 <- matrix(unlist(bootsam), ncol = ncol(df_scaled_uncorr), byrow =TRUE)
 bootsample1
 
 
@@ -262,11 +326,11 @@ func <- function(data, i){
   
 }
 
-bootsample2 <- boot(scaled_df,func, R=10)
+bootsample2 <- boot(df_scaled_uncorr,func, R=10)
 bootdata <- bootsample2$t0
 bootdata1 <- bootsample2$t
 bootdata11 <- bootsample2$t[1,]
-bootdata111 <-  matrix(unlist(bootdata11), ncol = ncol(scaled_df), byrow =TRUE)
+bootdata111 <-  matrix(unlist(bootdata11), ncol = ncol(df_scaled_uncorr), byrow =TRUE)
 
 ```
 

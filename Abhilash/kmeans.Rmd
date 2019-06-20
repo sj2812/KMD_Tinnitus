@@ -1,0 +1,348 @@
+---
+title: "KMD_Abhilash"
+author: "Abhilash"
+date: "6/1/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+
+library(dplyr)
+library(tidyverse)
+library(factoextra)
+library(fpc)
+library(RcmdrMisc)
+library(ggplot2)
+
+
+```
+
+## Matrix vs Dataframe
+https://www.burns-stat.com/documents/tutorials/impatient-r/#keyobjects
+Atomic types: Numeric, Character, logical, factor
+
+Matrices are of same atomic type, whereas Dataframe can have multiple atomic types in it.
+Matrix rows are vector, Dataframe rows are Dataframe(i.e. List).
+
+https://www.r-bloggers.com/matrix-vs-data-frame-in-r/ - x must be numeric error
+
+
+```{r}
+
+
+#Silhoutte Plot for Elbow method
+fviz_nbclust(df_scaled, kmeans, method = "silhouette", k.max = 8)
+
+
+```
+
+```{r}
+
+#https://www.guru99.com/r-k-means-clustering.html 
+
+
+set.seed(123)
+#Within group SS plot to see how the variations occur with different K values. 
+kmclust_withinss <- function(k){
+  kmclust <- kmeans(df_scaled,k,nstart=50,iter.max = 10 )
+  return(kmclust$tot.withinss)
+}
+
+# Set maximum cluster 
+max_k <-12 
+# Run algorithm over a range of k 
+wss <- sapply(1:max_k, kmclust_withinss)
+wss
+
+wss
+plot(1:max_k, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+
+```
+Depending on the previous results, lets define the possible values of K that we want to check and perform our clustering on.
+
+```{r}
+
+kcenters <- c(2,4,7)
+kcenters
+
+
+```
+
+
+Let's plot the heat map of the data for unclustered and clustered data. Clustered data are ordered according to the cluster allotment with the help of order. Therefore the rows get ordered according to their cluster assignment, so that all the rows are grouped together.
+
+
+```{r}
+
+#https://bookdown.org/rdpeng/exdata/k-means-clustering.html 
+
+library(RColorBrewer)
+library(gplots) #heatmap.2
+
+set.seed(123)
+
+#par(mfrow = c(1, 2)) #For 2 plots side by side
+
+image(t(df_scaled)[, nrow(df_scaled):1],
+      col = hcl.colors(20, "Spectral", rev = TRUE),
+      yaxt = "n", 
+      ylab = "row  order",xlab = "Heatmap values of rows", 
+      main = paste("Original Data"))
+
+
+hmcols<- colorRampPalette(brewer.pal(9,"GnBu"))(100)
+
+
+for(k in kcenters){
+
+  set.seed(123)
+  kmclust <- kmeans(df_scaled,k, nstart = 50, 10)
+  
+  image(t(df_scaled)[, order(kmclust$cluster)], 
+        col = hcl.colors(20, "Spectral", rev = TRUE), 
+        yaxt = "n", 
+        ylab = "row  order",xlab = "Heatmap values of rows", 
+        main = paste("Clustered Data k=",k))
+
+
+#heatmap.2(df_scaled, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
+
+}
+
+```
+
+
+
+
+
+```{r}
+
+#https://www.guru99.com/r-k-means-clustering.html 
+
+#HEATMAP to highlight difference between feature values wrt each cluster
+
+#The values are the average score by each cluster for the interested column. - Cluster means 
+
+library(tidyr)
+
+
+set.seed(12354)
+
+for (k in kcenters){
+
+kmclust <- kmeans(df_scaled,k,iter.max = 10)
+
+print(paste("Cluster Sizes for k=",k))
+#print(table(kmclust$size))
+print(table(kmclust$cluster))
+print("------------")
+
+#centers
+center <- kmclust$centers
+# create dataset with the cluster number
+cluster <- c(1: k)
+center_df <- data.frame(cluster, center)
+# Reshape the data
+center_reshape <- gather(center_df, features, values, .age: tlq_tlq02_4)
+head(center_reshape)
+  
+#conda install -c r r-rcolorbrewer : in cmd
+library(RColorBrewer)
+# Create the palette
+hm.palette <-colorRampPalette(rev(brewer.pal(10, 'RdYlGn')),space='Lab')
+#Plot the heat map
+
+print(
+    ggplot(data = center_reshape, aes(x = features, y = cluster, fill = values)) +
+      scale_y_continuous(breaks = seq(1, k, by = 1)) +
+      geom_tile() +
+      coord_equal() +
+      scale_fill_gradientn(colours = hm.palette(90)) +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5),
+          axis.text.y = element_text())
+    )
+}
+```
+
+Check the visualisation of the Kmeans result in the 2 Dimension space with the help of fviz_clust
+
+
+```{r}
+#https://rpkgs.datanovia.com/factoextra/reference/fviz_cluster.html
+
+
+for (k in kcenters){
+kmclust <- kmeans(df_scaled,k, nstart=50,iter.max = 15)
+print(fviz_cluster(kmclust, df_scaled, ellipse.type  = "norm", ellipse.level = 0.68))
+}
+```
+
+
+Assigning the rows their cluster numbers
+
+
+```{r}
+
+kmclust <- kmeans(df_scaled,4, nstart=50,iter.max = 15)
+
+klabels <- kmclust$cluster
+head(klabels, n = 50)
+
+```
+
+
+```{r}
+
+df_labeled <- df%>%
+  mutate(label = klabels)
+df_labeled%>%head
+
+```
+
+Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
+```{r}
+df_grouped<-df_labeled%>%
+  group_by(label)
+df_split<-group_split(df_grouped)
+
+```
+
+The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
+Also calculating the general population summary for each feature as "feature summary".
+```{r}
+cluster_features<-data.frame(df_labeled%>%
+                               select(-.jour_nr)%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df%>%
+                               select(-.jour_nr)%>%
+                               summarise_each(mean))
+
+```
+
+
+Finally creating a data frame which can be used for the visualization.
+The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
+```{r echo=TRUE}
+options(scipen = 999)
+
+f<-function(cluster)
+ { cluster_plot_data<-rbind(feature_summary,cluster[-1])
+  cluster_name<-paste("cluster_",cluster[1])
+  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+}
+apply(cluster_features,1,f)
+
+```
+
+
+
+
+
+Now we will create bootstrap samples to see if the selected k values are good or not depending on different sets of data (with replacement).
+
+
+
+
+```{r}
+
+library(fpc)
+
+#Bootstrapping
+
+# km.boot <- clusterboot(df_scaled, B=20, bootmethod="boot",
+#                        clustermethod=kmeansCBI,
+#                        krange=10, seed=123)
+
+
+set.seed(123)
+#Within group SS plot to see how the variations occur with different K values. 
+kmclust_withinss <- function(k){
+km.boot <- clusterboot(df_scaled, B=20, bootmethod="boot",
+                       clustermethod=kmeansCBI,
+                       krange=k, seed=1455)
+  return(km.boot$result$result$tot.withinss)
+}
+
+# Set maximum cluster 
+max_k <- 12 
+
+
+# Run algorithm over a range of k 
+wss.boot <- sapply(2:max_k, kmclust_withinss)
+#clusterboot works min from 2 clusters only
+
+#line plot
+plot(2:max_k, wss.boot,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+
+
+
+```
+
+```{r}
+
+library(boot)
+
+y1 <- matrix( round(rnorm(25,5)), ncol=5)
+y1
+y1[2,1] 
+
+
+y2 <- matrix( round(rnorm(40, 5)), ncol=5)
+y2
+
+
+bootsam <- lapply(1:nrow(y2), function(i){y2[sample(y2,ncol(y2), replace = T)]})
+y2
+bootsam1 <- matrix(unlist(bootsam), ncol = ncol(y2), byrow =TRUE)
+bootsam1
+
+bootsample <- lapply(1:nrow(df_scaled), function(i){df_scaled[sample(df_scaled, ncol(df_scaled), replace = T)]})
+y2
+bootsample1 <- matrix(unlist(bootsam), ncol = ncol(df_scaled), byrow =TRUE)
+bootsample1
+
+
+
+set.seed(123)
+func <- function(data, i){
+  
+  d2 <- data[i,]
+  
+}
+
+bootsample2 <- boot(df_scaled,func, R=10)
+bootdata <- bootsample2$t0
+bootdata1 <- bootsample2$t
+bootdata11 <- bootsample2$t[1,]
+bootdata111 <-  matrix(unlist(bootdata11), ncol = ncol(df_scaled), byrow =TRUE)
+
+```
+
+
+
+```{r}
+
+#https://bookdown.org/rdpeng/exdata/k-means-clustering.html
+#https://www.guru99.com/r-k-means-clustering.html
+#https://www.researchgate.net/publication/230686580_A_Comprehensive_Subcellular_Proteomic_Survey_of_Salmonella_Grown_under_Phagosome-Mimicking_versus_Standard_Laboratory_Conditions/figures?lo=1
+#https://www.google.com/search?q=z+score+in+kmeans&rlz=1C1CHBF_enIN765IN765&oq=z+score+in+kmeans&aqs=chrome..69i57j69i64.3175j0j4&sourceid=chrome&ie=UTF-8
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
