@@ -84,7 +84,7 @@ Depending on the previous results, lets define the possible values of K that we 
 
 ```{r}
 
-kcenters <- c(2,4,7)
+kcenters <- c(2,4,7,8, 11)
 kcenters
 
 
@@ -325,7 +325,7 @@ Plot the withinss data for k=1:12 and Bootsamples = 1:100
 
 ```{r}
 
-boxplot(totwss~k, data = wss.boot, xlab = "k", ylab = "totwss", main = "Bootsampled Data: Cluster withinss")
+boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
 
 ```
 
