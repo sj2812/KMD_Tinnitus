@@ -13,13 +13,18 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 
 
-library(dplyr)
-library(tidyverse)
-library(factoextra)
-library(fpc)
+library(dplyr)          #Data Grammar and Manipulation
+library(tidyverse)      #Data Manipulation
+library(factoextra)     #Clustering Visualisation
+library(fpc)            #For various Clustering methods and evaluations
 library(RcmdrMisc)
-library(ggplot2)
+library(ggplot2)        #General visualisation of plots
+library(r2d3)           #Visualisation of Pie Chart
+library(randomForest)   #Randomforest
+library(RColorBrewer)   #Color combinations
+library(gplots)         #heatmap.2
 
+print("Major Packages Loaded")
 
 ```
 
@@ -33,6 +38,9 @@ Matrix rows are vector, Dataframe rows are Dataframe(i.e. List).
 https://www.r-bloggers.com/matrix-vs-data-frame-in-r/ - x must be numeric error
 
 
+
+Evaluation of optimal number of clusters by measuring the silhouette value for each K value. Higher the value, better is the k for clustering the data.
+
 ```{r}
 
 
@@ -41,6 +49,11 @@ fviz_nbclust(df_scaled_uncorr, kmeans, method = "silhouette", k.max = 8)
 
 
 ```
+
+ELBOW METHOD - 
+Evaluation of optimal number of clusters by measuring the Within SSE value for each K value. Sharp change in value is chosen as the best K value. 
+If we take highest value, then the cluster is taking non-similar points, and hence the quality is low.
+If we take lowest value, it will correspond to overfittin (as withinss will decrease as the value of k increasses because cluster centers get more dispersed).
 
 ```{r}
 
@@ -247,6 +260,30 @@ apply(cluster_features,1,f)
 
 ```
 
+DECISION TREE
+
+Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
+Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
+
+Now to get the decision tree as a classifier intead of a regressor we need to make the predicting variable as non numeric.
+```{r}
+library(caret)
+library(rpart.plot)
+library(e1071)
+df_string_labeled<-df_labeled
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+trctrl <- trainControl(method = "boot", number = 10)
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10)
+
+prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+
+```
+
+
+BOOTSAMPLING METHOD
 
 Now we will create bootstrap samples to see if the selected k values are good or not depending on different sets of data (with replacement).
 
