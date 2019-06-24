@@ -41,4 +41,4 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
 originaldf <- read_rds("190426_charite_tinnitus.rds")
 
 
-df_scaled_uncorr <- scale(df)
+df_scaled_allF <- scale(df)

@@ -84,7 +84,7 @@ Depending on the previous results, lets define the possible values of K that we 
 
 ```{r}
 
-kcenters <- c(2,4,7,8, 11)
+kcenters <- c(2,4,8)
 kcenters
 
 
@@ -122,8 +122,8 @@ for(k in kcenters){
   
   image(t(df_scaled)[, order(kmclust$cluster)], 
         col = hcl.colors(20, "Spectral", rev = TRUE), 
-        yaxt = "n", 
-        ylab = "row  order",xlab = "Heatmap values of rows", 
+        yaxt = "n", xaxt = "n",
+        ylab = "Ordered Rows (as per Clustering)",xlab = "Column Features", 
         main = paste("Clustered Data k=",k))
 
 
@@ -195,7 +195,7 @@ Check the visualisation of the Kmeans result in the 2 Dimension space with the h
 
 for (k in kcenters){
 kmclust <- kmeans(df_scaled,k, nstart=50,iter.max = 15)
-print(fviz_cluster(kmclust, df_scaled, ellipse.type  = "norm", ellipse.level = 0.68))
+print(fviz_cluster(kmclust, df_scaled, ellipse.type  = "norm", ellipse.level = 0.68, main =  paste("Clustered Data k=",k) ))
 }
 ```
 
@@ -204,8 +204,9 @@ Assigning the rows their cluster numbers
 
 
 ```{r}
-
-kmclust <- kmeans(df_scaled,4, nstart=50,iter.max = 15)
+set.seed(123)
+k=4
+kmclust <- kmeans(df_scaled,k, nstart=50,iter.max = 15)
 
 klabels <- kmclust$cluster
 head(klabels, n = 50)
@@ -254,7 +255,7 @@ f<-function(cluster)
   rownames(cluster_plot_data)<-c("general_mean",cluster_name)
   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
   cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
-  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser")
 }
 apply(cluster_features,1,f)
 
@@ -270,6 +271,8 @@ Now to get the decision tree as a classifier intead of a regressor we need to ma
 library(caret)
 library(rpart.plot)
 library(e1071)
+
+set.seed(123)
 df_string_labeled<-df_labeled
 df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
 trctrl <- trainControl(method = "boot", number = 10)
