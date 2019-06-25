@@ -72,7 +72,7 @@ network_plot(correlate(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_
 
 
 #droping the columns
-final_data <- select(df_correlation,-c("sf8_mcs8","tq_pb"))
+final_data <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 
 
 df_scaled <- scale(final_data)
