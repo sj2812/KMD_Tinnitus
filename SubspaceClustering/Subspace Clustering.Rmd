@@ -12,17 +12,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 
 library(subspace)
-library(ggplot2)
-library(Rtsne)
 library(r2d3)
-#library(ChemmineR)
-library(scatterplot3d)
+library(tidyverse)
+
+
+#ProClus.clusters.k2 <- ProClus(df_scaled,k=4)
 
 ProClus.clusters.k2 <- ProClus(df_scaled,k=4)
 
-
-#install.packages("BiocManager")
-#BiocManager::install("ChemmineR")
 
 #identify the row ID for samples in each cluster (e.g. ProClus2[[1]]$objects identifies cluster 1
 #rowIDs)
@@ -30,6 +27,18 @@ cluster1<-ProClus.clusters.k2[[1]]$objects
 cluster2<-ProClus.clusters.k2[[2]]$objects
 cluster3<-ProClus.clusters.k2[[3]]$objects
 cluster4<-ProClus.clusters.k2[[4]]$objects
+
+
+
+# cluster1<-ProClus.clusters.k2[[1]]$objects
+# cluster2<-ProClus.clusters.k2[[2]]$objects
+# cluster3<-ProClus.clusters.k2[[3]]$objects
+# cluster4<-ProClus.clusters.k2[[4]]$objects
+# cluster5<-ProClus.clusters.k2[[5]]$objects
+# cluster6<-ProClus.clusters.k2[[6]]$objects
+# cluster7<-ProClus.clusters.k2[[7]]$objects
+# cluster8<-ProClus.clusters.k2[[8]]$objects
+
 ```
 
 
@@ -38,25 +47,66 @@ cluster4<-ProClus.clusters.k2[[4]]$objects
 labels<-c()
 
 for(i in cluster1){
-  
+
   labels[i] <- 1
-  
+
 }
 for(i in cluster2){
-  
+
   labels[i]<- 2
-  
+
 }
 for(i in cluster3){
-  
+
   labels[i]<- 3
-  
+
 }
 for(i in cluster4){
-  
+
   labels[i]<- 4
-  
+
 }
+
+# for(i in cluster1){
+#   
+#   labels[i] <- 1
+#   
+# }
+# for(i in cluster2){
+#   
+#   labels[i]<- 2
+#   
+# }
+# for(i in cluster3){
+#   
+#   labels[i]<- 3
+#   
+# }
+# for(i in cluster4){
+#   
+#   labels[i]<- 4
+#   
+# }
+# for(i in cluster5){
+#   
+#   labels[i] <- 5
+#   
+# }
+# for(i in cluster6){
+#   
+#   labels[i]<- 6
+#   
+# }
+# for(i in cluster7){
+#   
+#   labels[i]<- 7
+#   
+# }
+# for(i in cluster8){
+#   
+#   labels[i]<- 8
+#   
+# }
 
 ```
 
@@ -89,11 +139,27 @@ cluster_name<-paste("cluster_",cluster[1])
 rownames(cluster_plot_data)<-c("general_mean",cluster_name)
 cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
 cluster_plot_data<-mutate(cluster_plot_data,mean_difference = cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
-r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser")
+r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
 }
 apply(cluster_features,1,f)
 
 
+```
+
+```{r}
+library(caret)
+library(rpart.plot)
+library(e1071)
+df_string_labeled<-df_labeled
+#df_string_labeled$label <- as.character(df_string_labeled$label)
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+trctrl <- trainControl(method = "boot", number = 10)
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10)
+
+prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 ```
 
 
@@ -113,10 +179,11 @@ orclus.res <- orclus(x = subspace_data,k = 4,l = 40, k0 = 10)
 
 ```
 
+
 ```{r}
 
 orcluslabels <- orclus.res$cluster
-head(klabels, n = 50)
+head(orcluslabels, n = 50)
 
 ```
 
@@ -148,6 +215,12 @@ cluster_features<-data.frame(df_labeled%>%
 feature_summary<-data.frame(df%>%
                                select(-.jour_nr)%>%
                                summarise_each(mean))
+
+
+
+#Plotting Clusters in Radial Bar Chart
+
+cluster_features <- cluster_features[1:4,]
 
 ```
 
