@@ -76,7 +76,7 @@ Now we can choose the desired combination, for example: Euclidean and Ward metho
 
 dist_matrix<-dist(df_scaled, method = "euclidean")
 hc <-agnes(dist_matrix, method = "ward")
-sub_group<-cutree(hc,k=4)
+sub_group<-cutree(hc,k=8)
 table(sub_group)
 ```
 We can see above the number of records in each cluster.
