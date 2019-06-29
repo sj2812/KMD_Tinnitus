@@ -81,36 +81,44 @@ View(df)
 #random forest implementation for feature importance detection
 df$cluster <- as.factor(df$cluster)
 library(randomForest)
-iris.rf <- randomForest(formula= cluster ~ ., data=df, importance=TRUE,ntree=500,
-                        proximity=TRUE)
-colarr<-colnames(df)
-colarr
-print(iris.rf)
-plot(iris.rf)
-varImpPlot(iris.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
-## Look at variable importance:
-impfeat<-importance(iris.rf)
-impfeatdf<-data.frame(impfeat)
-cluster1<-(impfeatdf$X1)
-cluster2<-impfeatdf$X2
-cluster3<-impfeatdf$X3
-cluster4<-impfeatdf$X4
+library(mlbench)
+library(caret)
+library(e1071)
 
-getimpfeat<-function(clustdf)
-{
-  cimp<-vector()
-  for (i in 1:length (clustdf)){
-    if(clustdf[i]>0){
-      cimp[i]<-colarr[i]
-    }
-  }
-  return(na.omit( cimp))
+x <- df[,1:78]
+y <- df[,79]
+
+#tuning of rf
+customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
+customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+  randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
 }
-print("important features for cluster1 are")
-print(getimpfeat(cluster1))
-print("important features for cluster2 are")
-print(getimpfeat(cluster2))
-print("important features for cluster3 are")
-print(getimpfeat(cluster3))
-print("important features for cluster4 are")
-print(getimpfeat(cluster4))
+customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata)
+customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata, type = "prob")
+# train model
+control <- trainControl(method="repeatedcv", number=5, repeats=2)
+tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
+set.seed(123)
+custom <- train(cluster~., data=df, method=customRF, metric=metric, tuneGrid=tunegrid, trControl=control)
+#summary(custom)
+plot(custom)
+print(custom)
+data.rf <- randomForest(formula= cluster ~ ., data=df, importance=TRUE,ntree=1000,mtry=5,
+                        proximity=TRUE)
+
+print(data.rf)
+plot(data.rf)
+varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+## Look at variable importance:
+impfeat<-importance(data.rf)
+
+impfeatdf<-data.frame(impfeat)
+impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
+impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
+print(impfeatorder)
+
+  
