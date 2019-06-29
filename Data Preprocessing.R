@@ -3,7 +3,7 @@
 library(dplyr)
 library(tidyverse)
 
-df <- read_rds("E:/OVGU/Subject/Sem 3/KMD Project/Data from Uli/190426_charite_tinnitus.rds") %>%
+df <- read_rds("190426_charite_tinnitus.rds") %>%
   arrange(.testdatum) %>%
   group_by(.jour_nr) %>%
   slice(1) %>%
@@ -38,4 +38,41 @@ df <- read_rds("E:/OVGU/Subject/Sem 3/KMD Project/Data from Uli/190426_charite_t
   ) %>%
   drop_na()
 
-originaldf <- read_rds("E:/OVGU/Subject/Sem 3/KMD Project/Data from Uli/190426_charite_tinnitus.rds")
+originaldf <- read_rds("190426_charite_tinnitus.rds")
+
+
+
+## Correlation
+library(sqldf)
+
+df_correlation <- select(df,-c(.jour_nr))
+correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
+
+
+cat("\ncorrelation with 90%:\n")
+matriz_cor <- cor(df_correlation,method = "spearman")
+
+for (i in 1:nrow(matriz_cor)){
+  correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
+  matriz_cor[correlations,i] <- NA
+  
+  if(length(correlations)> 0){
+    #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
+    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_correlation)[i],F2=colnames(df_correlation)[correlations],coef=matriz_cor[i,correlations]))
+    rownames(correlated_coloumns) <- NULL
+  }
+}
+
+library(corrr)
+#library(PerformanceAnalytics)
+
+#chart.Correlation(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman",histogram = TRUE,pch = 19)
+
+network_plot(correlate(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman"))
+
+
+#droping the columns
+final_data <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
+
+
+df_scaled <- scale(final_data)
