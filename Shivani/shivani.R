@@ -44,16 +44,18 @@ View(df)
 library(factoextra)
 library(fpc)
 library(RcmdrMisc)
+library(sqldf)
+
 
 #correlation between all dimensions
-df.cor<-cor(df_scaled)
-View(df.cor)
+df_correlation <- select(df,-c(.jour_nr))
+final_data <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 
 
 set.seed(123)
 # Elbow method to get best k from k = 2 to k = 12.
 k.max <- 12
-df_scaled<-scale(df)
+df_scaled<-scale(final_data)
 
 wss <- sapply(1:k.max, 
               function(k){kmeans(df_scaled, k, nstart=50,iter.max = 15 )$tot.withinss})
@@ -75,18 +77,18 @@ hkmeans_tree(res.hk, cex = 0.2)
 fviz_cluster(res.hk, frame.type = "norm", frame.level = 0.68)
 
 #appening the created clusterlabels to data fo further work
-df$cluster<-res.hk$cluster
-View(df)
+final_data$cluster<-res.hk$cluster
+View(final_data)
 
 #random forest implementation for feature importance detection
-df$cluster <- as.factor(df$cluster)
+final_data$cluster <- as.factor(final_data$cluster)
 library(randomForest)
 library(mlbench)
 library(caret)
 library(e1071)
 
-x <- df[,1:78]
-y <- df[,79]
+x <- final_data[,1:73]
+y <- final_data[,74]
 
 #tuning of rf
 customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
@@ -102,8 +104,8 @@ customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
 # train model
 control <- trainControl(method="repeatedcv", number=5, repeats=2)
 tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
-set.seed(123)
-custom <- train(cluster~., data=df, method=customRF, metric=metric, tuneGrid=tunegrid, trControl=control)
+#set.seed(123)
+custom <- train(cluster~., data=final_data, method=customRF, metric=metric, tuneGrid=tunegrid, trControl=control)
 #summary(custom)
 plot(custom)
 print(custom)
