@@ -51,7 +51,7 @@ loading necessary libraries
 ```{r}
 
 library(factoextra)
-library(fpc)
+#library(fpc)
 library(RcmdrMisc)
 library(sqldf)
 ```
@@ -78,6 +78,7 @@ plot(1:k.max, wss,
 ```
 HKmeans implementation with k=4
 ```{r}
+
 #HKmeans implementation
 res.hk <-hkmeans(df_scaled, 2)
 names(res.hk)
