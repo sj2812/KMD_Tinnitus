@@ -22,7 +22,7 @@ svg=svg.append("g")
       .domain([0, 30]); // Domain of Y is from 0 to the max seen in the data
 
   // Add the bars
-  svg.append("g")
+var path = svg.append("g")
     .selectAll("path")
     .data(data)
     .enter()
@@ -49,3 +49,8 @@ svg=svg.append("g")
         .attr("transform", function(d) { return (x(d.feature) + x.bandwidth() / 2 + Math.PI) % (2 * Math.PI) < Math.PI ? "rotate(180)" : "rotate(0)"; })
         .style("font-size", "11px")
         .attr("alignment-baseline", "middle");
+        
+    var myTool = svg.append("div")
+                  .attr("class", "mytooltip")
+                  .style("opacity", "0")
+                  .style("display", "none");    
