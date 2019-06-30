@@ -18,26 +18,26 @@ library(tidyverse)
 
 #ProClus.clusters.k2 <- ProClus(df_scaled,k=4)
 
-ProClus.clusters.k2 <- ProClus(df_scaled,k=4)
+ProClus.clusters.k2 <- ProClus(df_scaled,k=8)
 
 
 #identify the row ID for samples in each cluster (e.g. ProClus2[[1]]$objects identifies cluster 1
 #rowIDs)
-cluster1<-ProClus.clusters.k2[[1]]$objects
-cluster2<-ProClus.clusters.k2[[2]]$objects
-cluster3<-ProClus.clusters.k2[[3]]$objects
-cluster4<-ProClus.clusters.k2[[4]]$objects
-
-
-
 # cluster1<-ProClus.clusters.k2[[1]]$objects
 # cluster2<-ProClus.clusters.k2[[2]]$objects
 # cluster3<-ProClus.clusters.k2[[3]]$objects
 # cluster4<-ProClus.clusters.k2[[4]]$objects
-# cluster5<-ProClus.clusters.k2[[5]]$objects
-# cluster6<-ProClus.clusters.k2[[6]]$objects
-# cluster7<-ProClus.clusters.k2[[7]]$objects
-# cluster8<-ProClus.clusters.k2[[8]]$objects
+
+
+
+cluster1<-ProClus.clusters.k2[[1]]$objects
+cluster2<-ProClus.clusters.k2[[2]]$objects
+cluster3<-ProClus.clusters.k2[[3]]$objects
+cluster4<-ProClus.clusters.k2[[4]]$objects
+cluster5<-ProClus.clusters.k2[[5]]$objects
+cluster6<-ProClus.clusters.k2[[6]]$objects
+cluster7<-ProClus.clusters.k2[[7]]$objects
+cluster8<-ProClus.clusters.k2[[8]]$objects
 
 ```
 
@@ -67,46 +67,27 @@ for(i in cluster4){
 
 }
 
-# for(i in cluster1){
-#   
-#   labels[i] <- 1
-#   
-# }
-# for(i in cluster2){
-#   
-#   labels[i]<- 2
-#   
-# }
-# for(i in cluster3){
-#   
-#   labels[i]<- 3
-#   
-# }
-# for(i in cluster4){
-#   
-#   labels[i]<- 4
-#   
-# }
-# for(i in cluster5){
-#   
-#   labels[i] <- 5
-#   
-# }
-# for(i in cluster6){
-#   
-#   labels[i]<- 6
-#   
-# }
-# for(i in cluster7){
-#   
-#   labels[i]<- 7
-#   
-# }
-# for(i in cluster8){
-#   
-#   labels[i]<- 8
-#   
-# }
+
+for(i in cluster5){
+
+  labels[i] <- 5
+
+}
+for(i in cluster6){
+
+  labels[i]<- 6
+
+}
+for(i in cluster7){
+
+  labels[i]<- 7
+
+}
+for(i in cluster8){
+
+  labels[i]<- 8
+
+}
 
 ```
 
@@ -153,6 +134,9 @@ library(e1071)
 df_string_labeled<-df_labeled
 #df_string_labeled$label <- as.character(df_string_labeled$label)
 df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+
+df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+
 trctrl <- trainControl(method = "boot", number = 10)
 dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
                    parms = list(split = "information"),
@@ -175,7 +159,7 @@ library(ggvis)
 subspace_data <- df_scaled
 
 
-orclus.res <- orclus(x = subspace_data,k = 4,l = 40, k0 = 10)
+orclus.res <- orclus(x = subspace_data,k = 8,l = 40, k0 = 10)
 
 ```
 
@@ -241,3 +225,23 @@ f<-function(cluster)
 apply(cluster_features,1,f)
 
 ```
+
+```{r}
+library(caret)
+library(rpart.plot)
+library(e1071)
+df_string_labeled<-df_labeled
+#df_string_labeled$label <- as.character(df_string_labeled$label)
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+
+#df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+
+trctrl <- trainControl(method = "boot", number = 10)
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10)
+
+prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+```
+
