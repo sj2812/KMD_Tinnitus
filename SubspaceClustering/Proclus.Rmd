@@ -10,12 +10,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-
+#Sys.setenv(JAVA_HOME="C:\\Program Files\\Java\\jdk-11.0.3" )
+library(rJava)
 library(subspace)
 library(r2d3)
 library(tidyverse)
 
-ProClus.clusters.k2<- ProClus(df_scaled,k=2)
+ProClus.clusters.k2<- ProClus(df_scaled,k=2,d=70)
 
 k2_cluster1<-ProClus.clusters.k2[[1]]$objects
 k2_cluster2<-ProClus.clusters.k2[[2]]$objects

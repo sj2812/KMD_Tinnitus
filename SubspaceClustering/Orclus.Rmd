@@ -18,7 +18,7 @@ library(orclus)
 library(ggvis)
 
 subspace_data <- df_scaled
-orclus.res.k2 <- orclus(x = subspace_data,k=2,l = 40, k0 = 10)
+orclus.res.k2 <- orclus(x = subspace_data,k=2,l = 50, k0 = 20)
 
 ```
 
