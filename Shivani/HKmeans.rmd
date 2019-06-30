@@ -79,7 +79,7 @@ plot(1:k.max, wss,
 HKmeans implementation with k=4
 ```{r}
 #HKmeans implementation
-res.hk <-hkmeans(df_scaled, 4)
+res.hk <-hkmeans(df_scaled, 2)
 names(res.hk)
 
 #result summary
@@ -120,8 +120,8 @@ f<-function(cluster)
 apply(cluster_features,1,f)
 
 ```
-```
-supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There are no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
+
+supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
 ```{r}
 
 df_labeled$cluster <- as.factor(df_labeled$cluster)
@@ -155,7 +155,7 @@ print(custom)
 ```
 applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
 ```{r}
-data.rf <- randomForest(formula= cluster ~ ., data=df_labeled, importance=TRUE,ntree=1000,mtry=5,
+data.rf <- randomForest(formula= cluster ~ ., data=df_labeled, importance=TRUE,ntree=1500,mtry=5,
                         proximity=TRUE)
 
 print(data.rf)
@@ -166,8 +166,17 @@ impfeat<-importance(data.rf)
 
 impfeatdf<-data.frame(impfeat)
 impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
-impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
-print(impfeatorder)
+
+getorderedfeatures<-function(numberofclusters){
+  if(numberofclusters==2)
+    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
+  if(numberofclusters==4)
+    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
+  print(impfeatorder)
+}
+getorderedfeatures(2)
+
+
 ```
 ```{r}
 library(caret)
