@@ -93,14 +93,14 @@ hkmeans_tree(res.hk, cex = 0.2)
 fviz_cluster(res.hk, frame.type = "norm", frame.level = 0.68)
 
 #appening the created clusterlabels to data fo further work
-df_labeled<-final_data
+df_labeled<-select(df,-c(.jour_nr))
 df_labeled$cluster<-res.hk$cluster
 View(df_labeled)
 
 cluster_features<-data.frame(df_labeled%>%
                                group_by(cluster)%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df_labeled[1:73]%>%
+feature_summary<-data.frame(df_labeled[1:77]%>%
                                summarise_each(mean))
 
 ```

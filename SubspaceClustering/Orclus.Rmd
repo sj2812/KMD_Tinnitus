@@ -1,0 +1,170 @@
+---
+title: "Orclus"
+author: "Priyanka"
+date: "30 6 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+ORCLUS CLUSTERING
+
+
+```{r}
+
+library(orclus)
+library(ggvis)
+
+subspace_data <- df_scaled
+orclus.res.k2 <- orclus(x = subspace_data,k=2,l = 50, k0 = 20)
+
+```
+
+
+```{r}
+
+orclus_labels <- orclus.res.k2$cluster
+head(orclus_labels, n = 50)
+
+```
+
+
+```{r}
+
+
+df_labeled <- df%>%
+  mutate(label = orclus_labels)
+df_labeled%>%head
+
+```
+
+rouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
+```{r}
+df_grouped<-df_labeled%>%
+  group_by(label)
+df_split<-group_split(df_grouped)
+
+```
+
+The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
+Also calculating the general population summary for each feature as "feature summary".
+```{r}
+#df_labeled <- df_labeled[-c(which(is.na(df_labeled$label))),]
+
+cluster_features<-data.frame(df_labeled%>%
+                               select(-.jour_nr)%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df%>%
+                               select(-.jour_nr)%>%
+                               summarise_each(mean))
+
+
+
+#Plotting Clusters in Radial Bar Chart
+
+cluster_features <- cluster_features[1:2,]
+
+```
+
+
+Finally creating a data frame which can be used for the visualization.
+The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
+```{r echo=TRUE}
+options(scipen = 999)
+
+f<-function(cluster)
+ { cluster_plot_data<-rbind(feature_summary,cluster[-1])
+  cluster_name<-paste("cluster_",cluster[1])
+  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+}
+apply(cluster_features,1,f)
+
+```
+
+Decision Trees
+
+```{r}
+library(caret)
+library(rpart.plot)
+library(e1071)
+
+set.seed(123)
+df_string_labeled<-df_labeled
+#df_string_labeled$label <- as.character(df_string_labeled$label)
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+
+#df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+
+trctrl <- trainControl(method = "boot", number = 10)
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10)
+
+prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+```
+
+
+RF
+
+```{r}
+df_labeled$label <- as.factor(df_labeled$label)
+library(randomForest)
+library(mlbench)
+library(caret)
+library(e1071)
+
+x <- df_labeled[,1:78]
+y <- df_labeled[,79]
+
+#tuning of rf
+customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
+customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+  randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
+}
+customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata)
+customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata, type = "prob")
+# train model
+control <- trainControl(method="repeatedcv", number=5, repeats=2)
+tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
+#set.seed(123)
+custom <- train(label~., data=df_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
+#summary(custom)
+plot(custom)
+print(custom)
+```
+applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
+
+```{r}
+data.rf <- randomForest(formula= label ~ ., data=df_labeled, importance=TRUE,ntree=1000,mtry=12,
+                        proximity=TRUE)
+
+print(data.rf)
+plot(data.rf)
+varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+
+impfeat<-importance(data.rf)
+
+impfeatdf<-data.frame(impfeat)
+impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
+
+getorderedfeatures<-function(numberofclusters){
+  if(numberofclusters==2)
+    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
+  if(numberofclusters==4)
+    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
+  print(impfeatorder)
+}
+getorderedfeatures(2)
+```
+
