@@ -70,3 +70,5 @@ library(corrr)
 #droping the columns
 final_data <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 df_scaled <- scale(final_data)
+
+df_scaled <- data.frame(df_scaled)
