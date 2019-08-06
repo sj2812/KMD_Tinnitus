@@ -42,3 +42,6 @@ originaldf <- read_rds("190426_charite_tinnitus.rds")
 
 
 df_scaled_allF <- scale(df)
+df_scaled_allF <- df_scaled_allF[,-1] #Remove .jour_nr
+
+df_scaled_allF <- data.frame(df_scaled_allF)
