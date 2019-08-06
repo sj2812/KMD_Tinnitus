@@ -70,7 +70,7 @@ cluster_name<-paste("cluster_",cluster[1])
 rownames(cluster_plot_data)<-c("general_mean",cluster_name)
 cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
 cluster_plot_data<-mutate(cluster_plot_data,mean_difference = cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
-r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser")
 }
 apply(cluster_features,1,f)
 
