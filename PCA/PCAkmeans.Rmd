@@ -27,28 +27,30 @@ library(gplots)         #heatmap.2
 print("Major Packages Loaded")
 
 ```
+
 ```{r}
 
-km.pc <- prcomp(df_scaled_allF, center = TRUE)
+km.pc <- prcomp(df_scaled, center = TRUE)
 summary(km.pc)
 ```
 
 ```{r}
 
-screeplot(km.pc, type = "l", npcs = 30, main = "Screeplot of the first 30 PCs")
+maxPC <- 50
+
+screeplot(km.pc, type = "l", npcs = maxPC, main = "Screeplot of the first 30 PCs")
 
 #eigenvalues <1 would mean that the component actually explains less than a single explanatory variable 
 abline(h = 1, col="red", lty=5)
 legend("topright", legend=c("Eigenvalue = 1"),
        col=c("red"), lty=5, cex=0.6)
 
-#No.of PCs
-PC_num <- 17
-PC_var <- 0.69
+#No.of PCs required to explain variance
+PC_num <- 3
+PC_var <- 0.40
 
 cumpro <- cumsum(km.pc$sdev^2 / sum(km.pc$sdev^2))
-plot(cumpro[0:30], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Cumulative variance plot at PC =",PC_num))
-
+plot(cumpro[0:maxPC], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Cumulative variance plot at PC =",PC_num))
 
 
 abline(v = PC_num, col="blue", lty=5)
@@ -61,22 +63,12 @@ legend("topleft", legend=c(paste("Cut-off @ PC",PC_num)), col=c("blue"), lty=5, 
 
 ```{r}
 
-#Creating dataset with first 17 PCs
+#Creating dataset with first PC_num PCs that we need to explain variance
 df_PC <- km.pc$x[,1:PC_num]
 
 ```
 
 
-
-Evaluation of optimal number of clusters by measuring the silhouette value for each K value. Higher the value, better is the k for clustering the data.
-
-```{r}
-
-
-#Silhoutte Plot for Elbow method
-fvi
-
-```
 
 Depending on the previous results, lets define the possible values of K that we want to check and perform our clustering on.
 
@@ -105,7 +97,7 @@ head(klabels, n = 50)
 
 ```{r}
 
-df_scaled_labeled <- df_scaled_allF%>%
+df_scaled_labeled <- df_scaled%>%
   mutate(label = klabels)
 df_scaled_labeled%>%head
 
@@ -125,7 +117,7 @@ Also calculating the general population summary for each feature as "feature sum
 cluster_features<-data.frame(df_scaled_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df_scaled_allF%>%
+feature_summary<-data.frame(df_scaled%>%
                                summarise_each(mean))
 
 ```
@@ -142,7 +134,7 @@ f<-function(cluster)
   rownames(cluster_plot_data)<-c("general_mean",cluster_name)
   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
   cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
-  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser")
 }
 apply(cluster_features,1,f)
 
@@ -305,27 +297,6 @@ for(i in bootsamplesize){
 colnames(wss.boot) <- c('k','totwss')
 
 ```
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
-Plot the withinss data for k=1:12 and Bootsamples = 1:100
 
 ```{r}
 
