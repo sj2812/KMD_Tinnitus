@@ -19,7 +19,7 @@ svg=svg.append("g")
       .domain(data.map(function(d) { return d.feature; })); // The domain of the X axis is the list of features.
   var y = d3.scaleLinear()
       .range([innerRadius, outerRadius])   // Domain will be define later.
-      .domain([0, 30]); // Domain of Y is from 0 to the max seen in the data
+      .domain([0, 2]); // Domain of Y is from 0 to the max seen in the data
 
   // Add the bars
   svg.append("g")

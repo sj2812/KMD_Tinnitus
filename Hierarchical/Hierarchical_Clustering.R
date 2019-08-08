@@ -1,8 +1,9 @@
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
 
-#Data Preprocessing
-library(dplyr)
-library(tidyverse)
-
+#Data preprocessing
 df <- read_rds("190426_charite_tinnitus.rds") %>%
   arrange(.testdatum) %>%
   group_by(.jour_nr) %>%
@@ -36,9 +37,35 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
          tinskal_beein10, tinskal_haeuf10, tinskal_laut10,
          starts_with("tlq"), -tlq_timestamp
   ) %>%
-  drop_na()
+  drop_na() %>%
+  scale()  #for scaling/normalising the data
 
-originaldf <- read_rds("190426_charite_tinnitus.rds")
+#Hierarchical Clustering
+
+# Dissimilarity matrix
+d <- dist(df, method = "euclidean")
+# Hierarchical clustering using Complete Linkage
+hc2 <- agnes(d, method = "complete")
+pltree(hc2, cex = 0.6, hang = -1)
+hc2$ac
+# methods to assess
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+m
+dist_methods <- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+
+# function to compute coefficient
+for(dist_m in dist_methods)
+{
+  dist_matrix<-dist(df, method = dist_m)
+  for(x in m)
+  {
+    hc <-agnes(dist_matrix, method = x)
+    pltree(hc, cex = 0.6, hang = -1)
+    ac<-hc$ac
+  }
+}
 
 
-df_scaled_allF <- scale(df)
+hc3 <- agnes(df, method = "ward")
+pltree(hc3, cex = 0.6, hang = -1, main = "Dendrogram of agnes")

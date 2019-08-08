@@ -40,7 +40,15 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
 
 originaldf <- read_rds("190426_charite_tinnitus.rds")
 
+############################# Scaled DataFrame (all features) ##################################
 
+df_scaled_allF <- scale(df)
+df_scaled_allF <- df_scaled_allF[,-1] #Remove .jour_nr
+
+df_scaled_allF <- data.frame(df_scaled_allF)
+
+
+###################################### Finding Correlation ####################################
 
 ## Correlation
 library(sqldf)
@@ -64,15 +72,17 @@ for (i in 1:nrow(matriz_cor)){
 }
 
 library(corrr)
-#library(PerformanceAnalytics)
 
-#chart.Correlation(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman",histogram = TRUE,pch = 19)
-
-network_plot(correlate(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman"))
-
+#network_plot(correlate(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman"))
 
 #droping the columns
 final_data <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
-
-
 df_scaled <- scale(final_data)
+
+
+
+######################## Final Scaled DataFrame (correlated removed) ####################################
+
+df_scaled <- data.frame(df_scaled)
+
+

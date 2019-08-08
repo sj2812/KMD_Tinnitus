@@ -45,7 +45,7 @@ Evaluation of optimal number of clusters by measuring the silhouette value for e
 
 
 #Silhoutte Plot for Elbow method
-fviz_nbclust(df_scaled, kmeans, method = "silhouette", k.max = 8)
+fviz_nbclust(df_scaled_allF, kmeans, method = "silhouette", k.max = 8)
 
 
 ```
@@ -63,7 +63,7 @@ If we take lowest value, it will correspond to overfittin (as withinss will decr
 set.seed(123)
 #Within group SS plot to see how the variations occur with different K values. 
 kmclust_withinss <- function(k){
-  kmclust <- kmeans(df_scaled,k,nstart=50,iter.max = 10 )
+  kmclust <- kmeans(df_scaled_allF,k,nstart=50,iter.max = 10 )
   return(kmclust$tot.withinss)
 }
 
@@ -105,8 +105,8 @@ set.seed(123)
 
 #par(mfrow = c(1, 2)) #For 2 plots side by side
 
-image(t(df_scaled)[, nrow(df_scaled):1],
-      col = hcl.colors(20, "Spectral", rev = TRUE),
+image(t(df_scaled_allF)[, nrow(df_scaled_allF):1],
+      col = hcl.colors(5, "Spectral", rev = TRUE),
       yaxt = "n", 
       ylab = "row  order",xlab = "Heatmap values of rows", 
       main = paste("Original Data"))
@@ -118,16 +118,16 @@ hmcols<- colorRampPalette(brewer.pal(9,"GnBu"))(100)
 for(k in kcenters){
 
   set.seed(123)
-  kmclust <- kmeans(df_scaled,k, nstart = 50, 10)
+  kmclust <- kmeans(df_scaled_allF,k, nstart = 50, 10)
   
-  image(t(df_scaled)[, order(kmclust$cluster)], 
-        col = hcl.colors(20, "Spectral", rev = TRUE), 
+  image(t(df_scaled_allF)[, order(kmclust$cluster)], 
+        col = hcl.colors(5, "Spectral", rev = TRUE), 
         yaxt = "n", xaxt = "n",
         ylab = "Ordered Rows (as per Clustering)",xlab = "Column Features", 
         main = paste("Clustered Data k=",k))
 
 
-#heatmap.2(df_scaled, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
+#heatmap.2(df_scaled_allF, kmclust, col=hmcols, trace= "none", main = paste("Clustered Data k=",k))
 
 }
 
@@ -152,7 +152,7 @@ set.seed(12354)
 
 for (k in kcenters){
 
-kmclust <- kmeans(df_scaled,k,iter.max = 10)
+kmclust <- kmeans(df_scaled_allF,k,iter.max = 10)
 
 print(paste("Cluster Sizes for k=",k))
 #print(table(kmclust$size))
@@ -165,7 +165,7 @@ center <- kmclust$centers
 cluster <- c(1: k)
 center_df <- data.frame(cluster, center)
 # Reshape the data
-center_reshape <- gather(center_df, features, values, .age: tlq_tlq02_4)
+center_reshape <- gather(center_df, features, values, .jour_nr: tlq_tlq02_4)
 head(center_reshape)
   
 #conda install -c r r-rcolorbrewer : in cmd
@@ -186,6 +186,7 @@ print(
 }
 ```
 
+
 Check the visualisation of the Kmeans result in the 2 Dimension space with the help of fviz_clust
 
 
@@ -194,8 +195,8 @@ Check the visualisation of the Kmeans result in the 2 Dimension space with the h
 
 
 for (k in kcenters){
-kmclust <- kmeans(df_scaled,k, nstart=50,iter.max = 15)
-print(fviz_cluster(kmclust, df_scaled, ellipse.type  = "norm", ellipse.level = 0.68, main =  paste("Clustered Data k=",k) ))
+kmclust <- kmeans(df_scaled_allF,k, nstart=50,iter.max = 15)
+print(fviz_cluster(kmclust, df_scaled_allF, ellipse.type  = "norm", ellipse.level = 0.68, main =  paste("Clustered Data k=",k)))
 }
 ```
 
@@ -205,19 +206,18 @@ Assigning the rows their cluster numbers
 
 ```{r}
 set.seed(123)
-k=4
-kmclust <- kmeans(df_scaled,k, nstart=50,iter.max = 15)
+k=8
+kmclust <- kmeans(df_scaled_allF,k, nstart=50,iter.max = 15)
 
-klabels <- kmclust$cluster
-head(klabels, n = 50)
-
+klabels_allF <- kmclust$cluster
+head(klabels_allF, n = 50)
 ```
 
 
 ```{r}
 
 df_labeled <- df%>%
-  mutate(label = klabels)
+  mutate(label = klabels_allF)
 df_labeled%>%head
 
 ```
@@ -233,7 +233,7 @@ df_split<-group_split(df_grouped)
 The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
 Also calculating the general population summary for each feature as "feature summary".
 ```{r}
-cluster_features<-data.frame(df_labeled%>%
+cluster_features_allF<-data.frame(df_labeled%>%
                                select(-.jour_nr)%>%
                                group_by(label)%>%
                                summarise_each(mean))
@@ -245,7 +245,7 @@ feature_summary<-data.frame(df%>%
 
 
 Finally creating a data frame which can be used for the visualization.
-The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
+The difference between "feature_summary" and "cluster_features_allF" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
 ```{r echo=TRUE}
 options(scipen = 999)
 
@@ -257,7 +257,7 @@ f<-function(cluster)
   cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
   r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser")
 }
-apply(cluster_features,1,f)
+apply(cluster_features_allF,1,f)
 
 ```
 
@@ -303,16 +303,17 @@ wss.boot <- data.frame()
 for(i in bootsamplesize){
 
   #Create Index with replacement
-  index <- sample(1:nrow(df_scaled),nrow(df_scaled),replace = T)
+  index <- sample(1:nrow(df_scaled_allF),nrow(df_scaled_allF),replace = T)
   
   #create samples from the index
-  dfSample <-  df_scaled[index,]
-  
+  dfSample <-  df_scaled_allF[index,]
+    
   #run for each value of k for the current sample  
   for(k in max_k){
       
     kmclust <- kmeans(dfSample,k,nstart=50,iter.max = 25)
     
+  
     #Store the data (1 row) of current K and withinss in the dataframe  
     wss.boot <- rbind(wss.boot, c(k,kmclust$tot.withinss))
     
@@ -328,7 +329,7 @@ Plot the withinss data for k=1:12 and Bootsamples = 1:100
 
 ```{r}
 
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
+boxplot(totwss~k, data = wss.boot, xlab = "k Values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
 
 ```
 

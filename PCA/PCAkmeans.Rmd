@@ -1,0 +1,297 @@
+---
+title: "KMD_Abhilash"
+author: "Abhilash"
+date: "6/1/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+
+library(dplyr)          #Data Grammar and Manipulation
+library(tidyverse)      #Data Manipulation
+library(factoextra)     #Clustering Visualisation
+library(fpc)            #For various Clustering methods and evaluations
+library(RcmdrMisc)
+library(ggplot2)        #General visualisation of plots
+library(r2d3)           #Visualisation of Pie Chart
+library(randomForest)   #Randomforest
+library(RColorBrewer)   #Color combinations
+library(gplots)         #heatmap.2
+
+print("Major Packages Loaded")
+
+```
+
+
+```{r}
+
+km.pc <- prcomp(df_scaled, center = TRUE)
+summary(km.pc)
+```
+
+```{r}
+
+maxPC <- 50
+
+screeplot(km.pc, type = "l", npcs = maxPC, main = "Screeplot of the first 30 PCs")
+
+#eigenvalues <1 would mean that the component actually explains less than a single explanatory variable 
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+
+#No.of PCs required to explain variance
+PC_num <- 3
+PC_var <- 0.40
+
+cumpro <- cumsum(km.pc$sdev^2 / sum(km.pc$sdev^2))
+plot(cumpro[0:maxPC], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Cumulative variance plot at PC =",PC_num))
+
+
+abline(v = PC_num, col="blue", lty=5)
+abline(h = PC_var, col="blue", lty=5)
+
+legend("topleft", legend=c(paste("Cut-off @ PC",PC_num)), col=c("blue"), lty=5, cex=0.6)
+
+```
+
+
+```{r}
+
+#Creating dataset with first PC_num PCs that we need to explain variance
+df_PC <- km.pc$x[,1:PC_num]
+
+```
+
+
+
+Depending on the previous results, lets define the possible values of K that we want to check and perform our clustering on.
+
+```{r}
+
+kcenters <- c(2,4)
+kcenters
+
+
+```
+
+
+Assigning the rows their cluster numbers
+
+
+```{r}
+set.seed(123)
+k=2
+kmclust <- kmeans(df_PC,k, nstart=50,iter.max = 15)
+
+klabels <- kmclust$cluster
+head(klabels, n = 50)
+
+```
+
+
+```{r}
+
+df_labeled_PCKmeans<-df[,-1]%>%
+  mutate(label = klabels)
+df_labeled_PCKmeans%>%head
+
+df_scaled_labeled_PCKmeans<-df_scaled_allF%>%
+  mutate(label = klabels)
+df_scaled_labeled_PCKmeans%>%head
+
+```
+
+Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
+```{r}
+df_scaled_grouped_PCKmeans<-df_scaled_labeled_PCKmeans%>%
+  group_by(label)
+df_split<-group_split(df_scaled_grouped_PCKmeans)
+
+```
+
+The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
+Also calculating the general population summary for each feature as "feature summary".
+```{r}
+cluster_features<-data.frame(df_scaled_labeled_PCKmeans%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df_scaled%>%
+                               summarise_each(mean))
+
+```
+
+
+Finally creating a data frame which can be used for the visualization.
+The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
+```{r echo=TRUE}
+options(scipen = 999)
+
+f<-function(cluster)
+ { cluster_plot_data<-rbind(feature_summary,cluster[-1])
+  cluster_name<-paste("cluster_",cluster[1])
+  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+}
+apply(cluster_features,1,f)
+
+```
+
+#####################
+
+RANDOM FOREST
+
+#####################
+
+supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
+```{r}
+
+df_labeled$label <- as.factor(df_labeled_kmeans$label)
+library(randomForest)
+library(mlbench)
+library(caret)
+library(e1071)
+
+x <- df_labeled[,1:78]
+y <- df_labeled[,79]
+
+#tuning of rf
+customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
+customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+  randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
+}
+customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata)
+customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata, type = "prob")
+# train model
+control <- trainControl(method="repeatedcv", number=5, repeats=2)
+tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
+set.seed(123)
+custom <- train(label~., data=df_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
+#summary(custom)
+plot(custom)
+print(custom)
+```
+applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
+```{r}
+data.rf <- randomForest(formula= label ~ ., data=df_labeled, importance=TRUE,ntree=500,mtry=6,
+                        proximity=TRUE)
+
+print(data.rf)
+plot(data.rf)
+varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+
+impfeat<-importance(data.rf)
+
+impfeatdf<-data.frame(impfeat)
+impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
+
+getorderedfeatures<-function(numberofclusters){
+  if(numberofclusters==2)
+    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
+  if(numberofclusters==4)
+    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
+  print(impfeatorder)
+}
+getorderedfeatures(4)
+
+
+```
+
+
+
+####################
+
+DECISION TREE
+
+####################
+
+
+Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
+Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
+
+Now to get the decision tree as a classifier intead of a regressor we need to make the predicting variable as non numeric.
+```{r}
+library(caret)
+library(rpart.plot)
+library(e1071)
+
+set.seed(123)
+df_string_labeled<-df_labeled_PCKmeans
+df_string_labeled$label<-sub("^","Type ",df_labeled_PCKmeans$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+trctrl <- trainControl(method = "boot", number = 10)
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10)
+
+prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+
+```
+
+
+BOOTSAMPLING METHOD
+
+Now we will create bootstrap samples to see if the selected k values are good or not depending on different sets of data (with replacement).
+
+
+```{r}
+#https://www.dummies.com/programming/r/how-to-take-samples-from-data-in-r/ 
+#https://stackoverflow.com/questions/31862933/storing-loop-output-in-a-dataframe-in-r
+
+bootsamplesize <- seq(1:100)
+max_k <-seq(1:12) 
+wss.boot <- data.frame()
+
+set.seed(123)
+for(i in bootsamplesize){
+
+  #Create Index with replacement
+  index <- sample(1:nrow(df_scaled),nrow(df_scaled),replace = T)
+  
+  #create samples from the index
+  dfSample <-  df_scaled[index,]
+  
+  #run for each value of k for the current sample  
+  for(k in max_k){
+      
+    kmclust <- kmeans(dfSample,k,nstart=50,iter.max = 25)
+    
+    #Store the data (1 row) of current K and withinss in the dataframe  
+    wss.boot <- rbind(wss.boot, c(k,kmclust$tot.withinss))
+    
+  }
+}
+
+colnames(wss.boot) <- c('k','totwss')
+
+```
+
+```{r}
+
+boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
+
+```
+
+
+
+```{r}
+
+#https://bookdown.org/rdpeng/exdata/k-means-clustering.html
+#https://www.guru99.com/r-k-means-clustering.html
+#https://www.researchgate.net/publication/230686580_A_Comprehensive_Subcellular_Proteomic_Survey_of_Salmonella_Grown_under_Phagosome-Mimicking_versus_Standard_Laboratory_Conditions/figures?lo=1
+#https://www.google.com/search?q=z+score+in+kmeans&rlz=1C1CHBF_enIN765IN765&oq=z+score+in+kmeans&aqs=chrome..69i57j69i64.3175j0j4&sourceid=chrome&ie=UTF-8
+
+```
+

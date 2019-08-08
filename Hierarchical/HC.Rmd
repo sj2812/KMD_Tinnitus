@@ -1,0 +1,143 @@
+---
+title: "KMD"
+author: "Kritika Bhowmik"
+date: "6/1/2019"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+First we would load all the necessary libraries
+```{r}
+#If any errors are thrown while loading libraries please install the packages commented below
+#install.packages("tidyverse")
+#install.packages("caret")
+#install.packages("rpart.plot")
+#install.packages("e1071")
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
+library(r2d3)
+```
+
+Hierarchical clustering can be done in two ways :
+1) Top Down : Start with the entire data as a cluster and break them down until each point is a cluster in itself.
+2) Bottom up : Start from individual points as clusters and merge them based on similarities until one cluster if formed.
+
+There are different ways to calculate the distance/ similarity between individual points and in between the clusters which can be a very important factor in deciding the final cluster results.
+
+So we first create a list of these methods and then create clusters for each combination.
+```{r}
+# methods to assess inter cluster similarity
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+#distance measures
+dist_methods <- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+names(dist_methods)<- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+
+```
+
+Now we can calculate the clusters. The ac value of each cluster gives the quality/ tightness of each cluster. The closer the value is to 1 the better are the results.
+
+**the agglomerative coefficient, measuring the clustering structure of the dataset.
+
+For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes.**
+```{r}
+# function to compute coefficient
+final_dist_m<-list()
+final_m<-list()
+for(dist_m in dist_methods)
+{
+  dist_matrix<-dist(df_scaled, method = dist_m)
+  for(x in m)
+  {
+    hc <-agnes(dist_matrix, method = x)
+    ac<-hc$ac
+    title<-sprintf("Distance: %s,Inter cluster Distance: %s, ac value: %f",dist_m,x,ac)
+    pltree(hc, cex = 0.6, hang = -1,main = title)
+    if(!is.nan(ac) && ac>0.95)
+    {
+      print(title)
+      final_dist_m<-c(final_dist_m,dist_m)
+      final_m<-c(final_m,x)
+    }
+  }
+}
+```
+
+Now we can choose the desired combination, for example: Euclidean and Ward method and then we can cut the tree to get the final clusters.
+```{r}
+
+dist_matrix<-dist(df_scaled, method = "euclidean")
+hc <-agnes(dist_matrix, method = "ward")
+sub_group<-cutree(hc,k=4)
+table(sub_group)
+```
+We can see above the number of records in each cluster.
+Let us now label all our records with the respective cluster number.
+```{r}
+df_labeled<-df%>%
+  mutate(label = sub_group)
+df_scaled_labeled<-df_scaled%>%
+  mutate(label = sub_group)
+df_labeled%>%head
+```
+Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
+```{r}
+df_grouped<-df_labeled%>%
+  group_by(label)
+df_split<-group_split(df_grouped)
+
+```
+The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
+Also calculating the general population summary for each feature as "feature summary".
+```{r}
+cluster_features<-data.frame(df_scaled_labeled%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df_scaled%>%
+                               summarise_each(mean))
+
+```
+Finally creating a data frame which can be used for the visualization.
+The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
+```{r echo=TRUE}
+options(scipen = 999)
+
+f<-function(cluster)
+ { cluster_plot_data<-rbind(feature_summary,cluster[-1])
+  cluster_name<-paste("cluster_",cluster[1])
+  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+}
+apply(cluster_features,1,f)
+
+```
+Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
+Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
+
+Now to get the decision tree as a classifier intead of a regressor we need to make the predicting variable as non numeric.
+```{r}
+library(caret)
+library(rpart.plot)
+library(e1071)
+df_string_labeled<-df_labeled
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+trctrl <- trainControl(method = "boot", number = 10)
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10)
+
+prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+
+```
+
