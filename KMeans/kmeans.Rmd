@@ -216,24 +216,28 @@ head(klabels, n = 50)
 
 ```{r}
 
-df_labeled <- df_scaled%>%
+df_labeled_Kmeans<-df[,-1]%>%
   mutate(label = klabels)
-df_labeled%>%head
+df_labeled_Kmeans%>%head
+
+df_scaled_labeled_Kmeans<-df_scaled_allF%>%
+  mutate(label = klabels)
+df_scaled_labeled_Kmeans%>%head
 
 ```
 
 Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
 ```{r}
-df_grouped<-df_labeled%>%
+df_scaled_grouped_Kmeans<-df_scaled_labeled_Kmeans%>%
   group_by(label)
-df_split<-group_split(df_grouped)
+df_split<-group_split(df_scaled_grouped_Kmeans)
 
 ```
 
 The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
 Also calculating the general population summary for each feature as "feature summary".
 ```{r}
-cluster_features<-data.frame(df_labeled%>%
+cluster_features<-data.frame(df_scaled_labeled_Kmeans%>%
                                group_by(label)%>%
                                summarise_each(mean))
 feature_summary<-data.frame(df_scaled%>%
@@ -253,13 +257,17 @@ f<-function(cluster)
   rownames(cluster_plot_data)<-c("general_mean",cluster_name)
   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
   cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
-  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser")
 }
 apply(cluster_features,1,f)
 
 ```
 
+#####################
+
 RANDOM FOREST
+
+#####################
 
 supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
 ```{r}
@@ -320,49 +328,13 @@ getorderedfeatures(4)
 ```
 
 
-```{r}
 
-
-```
-
-
+####################
 
 DECISION TREE
 
 ####################
 
-New df_labeled to be created (unscaled) to make Decision tree - so that we can compare the original value of the decision variables with the values given by Uli. 
-
-####################
-
-
-We can see above the number of records in each cluster.
-Let us now label all our records with the respective cluster number.
-```{r}
-df_labeled<-df%>%
-  mutate(label = sub_group)
-df_labeled%>%head
-```
-
-Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
-```{r}
-df_grouped<-df_labeled%>%
-  group_by(label)
-df_split<-group_split(df_grouped)
-
-```
-The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
-Also calculating the general population summary for each feature as "feature summary".
-```{r}
-cluster_features<-data.frame(df_labeled%>%
-                               select(-.jour_nr)%>%
-                               group_by(label)%>%
-                               summarise_each(mean))
-feature_summary<-data.frame(df%>%
-                               select(-.jour_nr)%>%
-                               summarise_each(mean))
-
-```
 
 Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
 Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
@@ -386,8 +358,11 @@ prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 
 ```
 
+#########################
 
 BOOTSAMPLING METHOD
+
+#########################
 
 Now we will create bootstrap samples to see if the selected k values are good or not depending on different sets of data (with replacement).
 
@@ -429,28 +404,6 @@ colnames(wss.boot) <- c('k','totwss')
 boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
 
 ```
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
-Plot the withinss data for k=1:12 and Bootsamples = 1:100
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
 
 
 ```{r}
