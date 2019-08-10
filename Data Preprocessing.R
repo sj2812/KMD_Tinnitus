@@ -40,7 +40,15 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
 
 originaldf <- read_rds("190426_charite_tinnitus.rds")
 
+############################# Scaled DataFrame (all features) ##################################
 
+df_scaled_allF <- scale(df)
+df_scaled_allF <- df_scaled_allF[,-1] #Remove .jour_nr
+
+df_scaled_allF <- data.frame(df_scaled_allF)
+
+
+###################################### Finding Correlation ####################################
 
 ## Correlation
 library(sqldf)
@@ -74,5 +82,15 @@ library(corrr)
 #droping the columns
 df_noCorr <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 
+<<<<<<< HEAD
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(final_data)%>%data.frame()
+=======
+
+
+######################## Final Scaled DataFrame (correlated removed) ####################################
+
+df_scaled <- data.frame(df_scaled)
+
+
+>>>>>>> ee5432a239e70adb1ef44843e1555b420fce3255
