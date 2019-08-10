@@ -45,12 +45,16 @@ originaldf <- read_rds("190426_charite_tinnitus.rds")
 ## Correlation
 library(sqldf)
 
-df_correlation <- select(df,-c(.jour_nr))
+df_allF <- select(df,-c(.jour_nr))
+
+#Data frame with all features "Scaled" except journ no
+df_allF_scaled<-scale(df_allF)%>%data.frame()
+
 correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
 
 
 cat("\ncorrelation with 90%:\n")
-matriz_cor <- cor(df_correlation,method = "spearman")
+matriz_cor <- cor(df_allF,method = "spearman")
 
 for (i in 1:nrow(matriz_cor)){
   correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
@@ -58,7 +62,7 @@ for (i in 1:nrow(matriz_cor)){
   
   if(length(correlations)> 0){
     #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
-    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_correlation)[i],F2=colnames(df_correlation)[correlations],coef=matriz_cor[i,correlations]))
+    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations],coef=matriz_cor[i,correlations]))
     rownames(correlated_coloumns) <- NULL
   }
 }
@@ -68,7 +72,7 @@ library(corrr)
 #network_plot(correlate(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman"))
 
 #droping the columns
-final_data <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
-df_scaled <- scale(final_data)
+df_noCorr <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 
-df_scaled <- data.frame(df_scaled)
+#Data frame with reduced features "Scaled"
+df_noCorr_scaled <- scale(final_data)%>%data.frame()
