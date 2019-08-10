@@ -54,7 +54,7 @@ final_dist_m<-list()
 final_m<-list()
 for(dist_m in dist_methods)
 {
-  dist_matrix<-dist(df_scaled, method = dist_m)
+  dist_matrix<-dist(df_noCorr_scaled, method = dist_m)
   for(x in m)
   {
     hc <-agnes(dist_matrix, method = x)
@@ -74,23 +74,29 @@ for(dist_m in dist_methods)
 Now we can choose the desired combination, for example: Euclidean and Ward method and then we can cut the tree to get the final clusters.
 ```{r}
 
-dist_matrix<-dist(df_scaled, method = "euclidean")
+dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
 hc <-agnes(dist_matrix, method = "ward")
-h_labels<-cutree(hc,k=4)
-table(h_labels)
+h2_labels<-cutree(hc,k=4)
+table(h2_labels)
+h4_labels<-cutree(hc,k=4)
+table(h4_labels)
 ```
 We can see above the number of records in each cluster.
 Let us now label all our records with the respective cluster number.
 ```{r}
-df_labeled<-df%>%
-  mutate(label = h_labels)
-df_scaled_labeled<-df_scaled%>%
-  mutate(label = h_labels)
-df_labeled%>%head
+df_allF_h2_labeled<-df_allF%>%
+  mutate(label = h2_labels)
+df_allF_scaled_h2_labeled<-df_allF_scaled%>%
+  mutate(label = h2_labels)
+df_allF_h4_labeled<-df_allF%>%
+  mutate(label = h4_labels)
+df_allF_scaled_h4_labeled<-df_allF_scaled%>%
+  mutate(label = h4_labels)
+
 ```
 Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
 ```{r}
-df_grouped<-df_labeled%>%
+df_grouped<-df_allF_h2_labeled%>%
   group_by(label)
 df_split<-group_split(df_grouped)
 
@@ -98,15 +104,15 @@ df_split<-group_split(df_grouped)
 The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
 Also calculating the general population summary for each feature as "feature summary".
 ```{r}
-cluster_features_scaled<-data.frame(df_scaled_labeled%>%
+cluster_features_scaled<-data.frame(df_allF_scaled_h2_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-cluster_features<-data.frame(df_labeled%>%
+cluster_features<-data.frame(df_allF_h2_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-feature_summary_scaled<-data.frame(df_scaled%>%
+feature_summary_scaled<-data.frame(df_allF_scaled%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df%>%
+feature_summary<-data.frame(df_allF%>%
                                summarise_each(mean))
 ```
 Finally creating a data frame which can be used for the visualization.
@@ -134,10 +140,10 @@ Now to get the decision tree as a classifier intead of a regressor we need to ma
 library(caret)
 library(rpart.plot)
 library(e1071)
-df_string_labeled<-df_labeled
-df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+df_string_h2_labeled<-df_allF_h2_labeled
+df_string_h2_labeled$label<-sub("^","Type ",df_allF_h2_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
 trctrl <- trainControl(method = "boot", number = 10)
-dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+dtree_fit <- train(label ~., data = df_string_h2_labeled, method = "rpart",
                    parms = list(split = "information"),
                    trControl=trctrl,
                    tuneLength = 10)

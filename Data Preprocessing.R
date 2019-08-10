@@ -39,27 +39,17 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
   drop_na()
 
 originaldf <- read_rds("190426_charite_tinnitus.rds")
-
-############################# Scaled DataFrame (all features) ##################################
-
-df_scaled_allF <- scale(df)
-df_scaled_allF <- df_scaled_allF[,-1] #Remove .jour_nr
-
-df_scaled_allF <- data.frame(df_scaled_allF)
-
-
-###################################### Finding Correlation ####################################
-
-## Correlation
-library(sqldf)
-
+###################################### All Features Except Journ no ####################################
 df_allF <- select(df,-c(.jour_nr))
 
 #Data frame with all features "Scaled" except journ no
 df_allF_scaled<-scale(df_allF)%>%data.frame()
 
-correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
+###################################### Finding Correlation ####################################
 
+library(sqldf)
+
+correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
 
 cat("\ncorrelation with 90%:\n")
 matriz_cor <- cor(df_allF,method = "spearman")
@@ -75,22 +65,10 @@ for (i in 1:nrow(matriz_cor)){
   }
 }
 
-library(corrr)
+###################################### No correlated columns ####################################
 
-#network_plot(correlate(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman"))
+#dropping the columns
+df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 
-#droping the columns
-df_noCorr <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
-
-<<<<<<< HEAD
 #Data frame with reduced features "Scaled"
-df_noCorr_scaled <- scale(final_data)%>%data.frame()
-=======
-
-
-######################## Final Scaled DataFrame (correlated removed) ####################################
-
-df_scaled <- data.frame(df_scaled)
-
-
->>>>>>> ee5432a239e70adb1ef44843e1555b420fce3255
+df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
