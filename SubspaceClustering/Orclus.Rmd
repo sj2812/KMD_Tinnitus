@@ -24,9 +24,9 @@ tune_l_sparsity<- data.frame(k = numeric(),dim = numeric(),sparsity = numeric(),
 tune_l_sse<-vector("list",1)
 j<-1
 
-for (k in seq(10,30)) {
+for (k in seq(10,50)) {
   
-  for (i in seq(20,70)) {
+  for (i in seq(10,60)) {
     
     orclus.res.k2 <- orclus(x = subspace_data,k=4,l = i, k0 = k)
     tune_l_sparsity[j,1] <- k
