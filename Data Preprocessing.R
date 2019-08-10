@@ -39,26 +39,20 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
   drop_na()
 
 originaldf <- read_rds("190426_charite_tinnitus.rds")
+###################################### All Features Except Journ no ####################################
+df_allF <- select(df,-c(.jour_nr))
 
-############################# Scaled DataFrame (all features) ##################################
-
-df_scaled_allF <- scale(df)
-df_scaled_allF <- df_scaled_allF[,-1] #Remove .jour_nr
-
-df_scaled_allF <- data.frame(df_scaled_allF)
-
+#Data frame with all features "Scaled" except journ no
+df_allF_scaled<-scale(df_allF)%>%data.frame()
 
 ###################################### Finding Correlation ####################################
 
-## Correlation
 library(sqldf)
 
-df_correlation <- select(df,-c(.jour_nr))
 correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
 
-
 cat("\ncorrelation with 90%:\n")
-matriz_cor <- cor(df_correlation,method = "spearman")
+matriz_cor <- cor(df_allF,method = "spearman")
 
 for (i in 1:nrow(matriz_cor)){
   correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
@@ -66,23 +60,15 @@ for (i in 1:nrow(matriz_cor)){
   
   if(length(correlations)> 0){
     #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
-    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_correlation)[i],F2=colnames(df_correlation)[correlations],coef=matriz_cor[i,correlations]))
+    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations],coef=matriz_cor[i,correlations]))
     rownames(correlated_coloumns) <- NULL
   }
 }
 
-library(corrr)
+###################################### No correlated columns ####################################
 
-#network_plot(correlate(df_correlation[,c("sf8_mcs8","tq_pb","sf8_mh_sf36pw","tq_tf","tq_em","tq_co")],method = "spearman"))
+#dropping the columns
+df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 
-#droping the columns
-final_data <- select(df_correlation,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
-df_scaled <- scale(final_data)
-
-
-
-######################## Final Scaled DataFrame (correlated removed) ####################################
-
-df_scaled <- data.frame(df_scaled)
-
-
+#Data frame with reduced features "Scaled"
+df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()

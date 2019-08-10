@@ -54,7 +54,7 @@ final_dist_m<-list()
 final_m<-list()
 for(dist_m in dist_methods)
 {
-  dist_matrix<-dist(df_scaled, method = dist_m)
+  dist_matrix<-dist(df_noCorr_scaled, method = dist_m)
   for(x in m)
   {
     hc <-agnes(dist_matrix, method = x)
@@ -74,23 +74,29 @@ for(dist_m in dist_methods)
 Now we can choose the desired combination, for example: Euclidean and Ward method and then we can cut the tree to get the final clusters.
 ```{r}
 
-dist_matrix<-dist(df_scaled, method = "euclidean")
+dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
 hc <-agnes(dist_matrix, method = "ward")
-sub_group<-cutree(hc,k=4)
-table(sub_group)
+h2_labels<-cutree(hc,k=4)
+table(h2_labels)
+h4_labels<-cutree(hc,k=4)
+table(h4_labels)
 ```
 We can see above the number of records in each cluster.
 Let us now label all our records with the respective cluster number.
 ```{r}
-df_labeled<-df%>%
-  mutate(label = sub_group)
-df_scaled_labeled<-df_scaled%>%
-  mutate(label = sub_group)
-df_labeled%>%head
+df_allF_h2_labeled<-df_allF%>%
+  mutate(label = h2_labels)
+df_allF_scaled_h2_labeled<-df_allF_scaled%>%
+  mutate(label = h2_labels)
+df_allF_h4_labeled<-df_allF%>%
+  mutate(label = h4_labels)
+df_allF_scaled_h4_labeled<-df_allF_scaled%>%
+  mutate(label = h4_labels)
+
 ```
 Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
 ```{r}
-df_grouped<-df_labeled%>%
+df_grouped<-df_allF_h2_labeled%>%
   group_by(label)
 df_split<-group_split(df_grouped)
 
@@ -98,12 +104,16 @@ df_split<-group_split(df_grouped)
 The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
 Also calculating the general population summary for each feature as "feature summary".
 ```{r}
-cluster_features<-data.frame(df_scaled_labeled%>%
+cluster_features_scaled<-data.frame(df_allF_scaled_h2_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df_scaled%>%
+cluster_features<-data.frame(df_allF_h2_labeled%>%
+                               group_by(label)%>%
                                summarise_each(mean))
-
+feature_summary_scaled<-data.frame(df_allF_scaled%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df_allF%>%
+                               summarise_each(mean))
 ```
 Finally creating a data frame which can be used for the visualization.
 The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
@@ -111,12 +121,13 @@ The difference between "feature_summary" and "cluster_features" will tell us how
 options(scipen = 999)
 
 f<-function(cluster)
- { cluster_plot_data<-rbind(feature_summary,cluster[-1])
+ { cluster_plot_data<-rbind(feature_summary,feature_summary_scaled,cluster[-1])
   cluster_name<-paste("cluster_",cluster[1])
-  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  rownames(cluster_plot_data)<-c("general_mean","general_mean_scaled",cluster_name)
   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,2]-cluster_plot_data[,3],feature=rownames(cluster_plot_data))
   r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+  summary(cluster_plot_data)
 }
 apply(cluster_features,1,f)
 
@@ -129,10 +140,10 @@ Now to get the decision tree as a classifier intead of a regressor we need to ma
 library(caret)
 library(rpart.plot)
 library(e1071)
-df_string_labeled<-df_labeled
-df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+df_string_h2_labeled<-df_allF_h2_labeled
+df_string_h2_labeled$label<-sub("^","Type ",df_allF_h2_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
 trctrl <- trainControl(method = "boot", number = 10)
-dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+dtree_fit <- train(label ~., data = df_string_h2_labeled, method = "rpart",
                    parms = list(split = "information"),
                    trControl=trctrl,
                    tuneLength = 10)
