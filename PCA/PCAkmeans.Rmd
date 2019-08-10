@@ -27,28 +27,31 @@ library(gplots)         #heatmap.2
 print("Major Packages Loaded")
 
 ```
+
+
 ```{r}
 
-km.pc <- prcomp(df_scaled_allF, center = TRUE)
+km.pc <- prcomp(df_scaled, center = TRUE)
 summary(km.pc)
 ```
 
 ```{r}
 
-screeplot(km.pc, type = "l", npcs = 30, main = "Screeplot of the first 30 PCs")
+maxPC <- 50
+
+screeplot(km.pc, type = "l", npcs = maxPC, main = "Screeplot of the first 30 PCs")
 
 #eigenvalues <1 would mean that the component actually explains less than a single explanatory variable 
 abline(h = 1, col="red", lty=5)
 legend("topright", legend=c("Eigenvalue = 1"),
        col=c("red"), lty=5, cex=0.6)
 
-#No.of PCs
-PC_num <- 17
-PC_var <- 0.69
+#No.of PCs required to explain variance
+PC_num <- 3
+PC_var <- 0.40
 
 cumpro <- cumsum(km.pc$sdev^2 / sum(km.pc$sdev^2))
-plot(cumpro[0:30], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Cumulative variance plot at PC =",PC_num))
-
+plot(cumpro[0:maxPC], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Cumulative variance plot at PC =",PC_num))
 
 
 abline(v = PC_num, col="blue", lty=5)
@@ -61,22 +64,12 @@ legend("topleft", legend=c(paste("Cut-off @ PC",PC_num)), col=c("blue"), lty=5, 
 
 ```{r}
 
-#Creating dataset with first 17 PCs
+#Creating dataset with first PC_num PCs that we need to explain variance
 df_PC <- km.pc$x[,1:PC_num]
 
 ```
 
 
-
-Evaluation of optimal number of clusters by measuring the silhouette value for each K value. Higher the value, better is the k for clustering the data.
-
-```{r}
-
-
-#Silhoutte Plot for Elbow method
-fvi
-
-```
 
 Depending on the previous results, lets define the possible values of K that we want to check and perform our clustering on.
 
@@ -105,27 +98,31 @@ head(klabels, n = 50)
 
 ```{r}
 
-df_scaled_labeled <- df_scaled_allF%>%
+df_labeled_PCKmeans<-df[,-1]%>%
   mutate(label = klabels)
-df_scaled_labeled%>%head
+df_labeled_PCKmeans%>%head
+
+df_scaled_labeled_PCKmeans<-df_scaled_allF%>%
+  mutate(label = klabels)
+df_scaled_labeled_PCKmeans%>%head
 
 ```
 
 Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
 ```{r}
-df_scaled_grouped<-df_scaled_labeled%>%
+df_scaled_grouped_PCKmeans<-df_scaled_labeled_PCKmeans%>%
   group_by(label)
-df_split<-group_split(df_scaled_grouped)
+df_split<-group_split(df_scaled_grouped_PCKmeans)
 
 ```
 
 The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
 Also calculating the general population summary for each feature as "feature summary".
 ```{r}
-cluster_features<-data.frame(df_scaled_labeled%>%
+cluster_features<-data.frame(df_scaled_labeled_PCKmeans%>%
                                group_by(label)%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df_scaled_allF%>%
+feature_summary<-data.frame(df_scaled%>%
                                summarise_each(mean))
 
 ```
@@ -148,12 +145,16 @@ apply(cluster_features,1,f)
 
 ```
 
+#####################
+
 RANDOM FOREST
+
+#####################
 
 supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
 ```{r}
 
-df_labeled$label <- as.factor(df_labeled$label)
+df_labeled$label <- as.factor(df_labeled_kmeans$label)
 library(randomForest)
 library(mlbench)
 library(caret)
@@ -210,41 +211,12 @@ getorderedfeatures(4)
 
 
 
+####################
+
 DECISION TREE
 
 ####################
 
-New df_labeled to be created (unscaled) to make Decision tree - so that we can compare the original value of the decision variables with the values given by Uli. 
-
-####################
-
-
-We can see above the number of records in each cluster.
-Let us now label all our records with the respective cluster number.
-```{r}
-df_labeled<-df%>%
-  mutate(label = sub_group)
-df_labeled%>%head
-```
-Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
-```{r}
-df_grouped<-df_labeled%>%
-  group_by(label)
-df_split<-group_split(df_grouped)
-
-```
-The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
-Also calculating the general population summary for each feature as "feature summary".
-```{r}
-cluster_features<-data.frame(df_labeled%>%
-                               select(-.jour_nr)%>%
-                               group_by(label)%>%
-                               summarise_each(mean))
-feature_summary<-data.frame(df%>%
-                               select(-.jour_nr)%>%
-                               summarise_each(mean))
-
-```
 
 Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
 Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
@@ -256,8 +228,8 @@ library(rpart.plot)
 library(e1071)
 
 set.seed(123)
-df_string_labeled<-df_labeled
-df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+df_string_labeled<-df_labeled_PCKmeans
+df_string_labeled$label<-sub("^","Type ",df_labeled_PCKmeans$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
 trctrl <- trainControl(method = "boot", number = 10)
 dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
                    parms = list(split = "information"),
@@ -305,27 +277,6 @@ for(i in bootsamplesize){
 colnames(wss.boot) <- c('k','totwss')
 
 ```
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
-
-```{r}
-
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
-```
-
-Plot the withinss data for k=1:12 and Bootsamples = 1:100
 
 ```{r}
 

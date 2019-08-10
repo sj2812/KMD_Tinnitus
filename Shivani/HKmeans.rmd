@@ -67,6 +67,14 @@ set.seed(123)
 # Elbow method to get best k from k = 2 to k = 12.
 k.max <- 12
 df_scaled<-scale(final_data)
+rownames( df_scaled ) <- seq_len( nrow( df_scaled ) )
+library("clValid")
+intern <- clValid(df_scaled, 2:6, 
+              clMethods = c("hkmeans"),
+              validation = "internal")
+optimalScores(intern)
+# Summary
+summary(intern)
 
 wss <- sapply(1:k.max, 
               function(k){kmeans(df_scaled, k, nstart=50,iter.max = 15 )$tot.withinss})
@@ -84,6 +92,10 @@ names(res.hk)
 
 #result summary
 res.hk
+
+dunn_km = dunn(clusters = res.hk$cluster, Data=df_scaled)
+dunn_km
+connectivity(distance = NULL, res.hk$cluster, Data = df_scaled, neighbSize = 10, method = "euclidean")
 ```
 Visualisation and appending the labels obtained after clustering 
 ```{r}
@@ -96,7 +108,8 @@ fviz_cluster(res.hk, frame.type = "norm", frame.level = 0.68)
 df_labeled<-select(df,-c(.jour_nr))
 df_labeled$cluster<-res.hk$cluster
 View(df_labeled)
-
+library(diceR)
+compactness(df_scaled, df_labeled$cluster)
 cluster_features<-data.frame(df_labeled%>%
                                group_by(cluster)%>%
                                summarise_each(mean))
@@ -182,9 +195,13 @@ getorderedfeatures(2)
 library(caret)
 library(rpart.plot)
 library(e1071)
-set.seed(123)                                                     #non numeric
+set.seed(123) 
+
+df_string_labeled<-df_labeled
+df_string_labeled$cluster<-paste("type",df_labeled$cluster)
+
 trctrl <- trainControl(method = "boot", number = 10)
-dtree_fit <- train(cluster ~., data = df_labeled, method = "rpart",
+dtree_fit <- train(cluster ~., data = df_string_labeled, method = "rpart",
                    parms = list(split = "information"),
                    trControl=trctrl,
                    tuneLength = 10)
