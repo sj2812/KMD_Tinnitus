@@ -278,8 +278,8 @@ library(mlbench)
 library(caret)
 library(e1071)
 
-x <- df_labeled[,1:78]
-y <- df_labeled[,79]
+x <- df_labeled[,1:73]
+y <- df_labeled[,74]
 
 #tuning of rf
 customRF <- list(type = "Classification", library = "randomForest", loop = NULL)

@@ -17,8 +17,25 @@ ORCLUS CLUSTERING
 library(orclus)
 library(ggvis)
 
+set.seed(123)
+
 subspace_data <- df_scaled
-orclus.res.k2 <- orclus(x = subspace_data,k=2,l = 50, k0 = 20)
+tune_l_sparsity<- data.frame(k = numeric(),dim = numeric(),sparsity = numeric(),proj = numeric())
+tune_l_sse<-vector("list",1)
+j<-1
+
+for (k in seq(10,50)) {
+  
+  for (i in seq(10,60)) {
+    
+    orclus.res.k2 <- orclus(x = subspace_data,k=4,l = i, k0 = k)
+    tune_l_sparsity[j,1] <- k
+    tune_l_sparsity[j,2] <- i
+    tune_l_sparsity[j,3] <- orclus.res.k2$sparsity.coefficient
+    tune_l_sparsity[j,4] <- sum(orclus.res.k2$within.projens)
+    j <- j+1
+  }
+}
 
 ```
 
