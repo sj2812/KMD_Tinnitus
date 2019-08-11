@@ -45,6 +45,9 @@ library(factoextra) # clustering visualization
 library(dendextend) # for comparing two dendrograms
 library(r2d3)
 library(sqldf)
+library(caret)
+library(rpart.plot)
+library(e1071)
 ```
 
 ## Data preprocessing 
@@ -226,45 +229,79 @@ cluster_features<-data.frame(df_allF_labeled%>%
 }
 
 ```
+## Decision Tree
+
+Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
+Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
+
+Now to get the decision tree as a classifier intead of a regressor we need to make the predicting variable as non numeric.
+```{r}
+createDT<-function(final_labels,remove_na)
+{
+  # labelling the records 
+  df_allF_labeled<-df_allF%>%
+  mutate(label = final_labels)
+  df_string_labeled<-df_allF_labeled
+  
+  #Adding "Type" to each cluster number to make it non numeric
+  df_string_labeled$label<-sub("^","Type ",df_allF_labeled$label)
+  if(remove_na)
+  {
+    df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+  }
+  
+  trctrl <- trainControl(method = "boot", number = 10)
+  dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                     parms = list(split = "information"),
+                     trControl=trctrl,
+                     tuneLength = 10)
+  
+  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+}
+
+```
 
 ```{r}
 ```
 # Fetching labels for k=2
 ```{r}
-
+removeNA <- 0
+num_clusters <- 2
 # k means 
 
 
 # Hierarchical 
-h2_labels<-cutree(hc,k=2)
-initVis(h2_labels,2)
+h2_labels<-cutree(hc,k=num_clusters)
+initVis(h2_labels,num_clusters)
+createDT(h2_labels,removeNA)
 
 # HK means
 
+# Proclus
+removeNA <- 1
 
 ```
 # Fetching labels for k=4
 ```{r}
-
+removeNA<- 0
+num_clusters<- 4
 
 # k means
 
 # Hierarchical 
-h4_labels<-cutree(hc,k=4)
-initVis(h4_labels,4)
+h4_labels<-cutree(hc,k=num_clusters)
+initVis(h4_labels,num_clusters)
 # HK means
 
-
+# Proclus
+removeNA <- 1
 ```
 
 random forest
 ```{r}
 
 ```
-decision tree
-```{r}
 
-```
 Evaluation
 ```{r}
 
