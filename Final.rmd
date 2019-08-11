@@ -1,0 +1,47 @@
+---
+title: "final"
+author: "Abhilash, Kritika, Priyanka, Shivani"
+date: "11 August 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+All libraries
+```{r}
+
+```
+
+needed data frames creation
+
+```{r}
+
+```
+elbow method for kmeans and hkmeans and ac for hierarchical
+```{r}
+
+```
+implementation of algorithms for k=2 and k=4
+```{r}
+
+```
+radial chart visualisation
+```{r}
+
+```
+random forest
+```{r}
+
+```
+decision tree
+```{r}
+
+```
+Evaluation
+```{r}
+
+```
