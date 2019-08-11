@@ -90,7 +90,7 @@ set.seed(123)
 k=2
 kmclust <- kmeans(df_PC,k, nstart=50,iter.max = 15)
 
-klabels <- kmclust$cluster
+klabels <- kmclust$cluster # klabels for getting labelled data
 head(klabels, n = 50)
 
 ```
