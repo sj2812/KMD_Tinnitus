@@ -1,0 +1,400 @@
+---
+title: "final"
+author: "Abhilash, Kritika, Priyanka, Shivani"
+date: "11 August 2019"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Motivation
+* Tinnitus is a highly common health problem which severely affects people. As a Tinnitus patient, people need to fill many
+questionnaires which can be tiring.
+
+* If we know the possible sub categories of Tinnitus it would help medical practitioners to provide category specific medical assistance to the patients.
+
+* Understanding the sub categories would also help to identify questionnaires which are only relevant to these sub categories and thus reduce the number questions patients might have to fill.
+
+## Problem Statement
+1) To identify relevant sub-categories of Tinnitus condition
+
+2) To represent/describe the identified clusters and assign most relevant questionnaires respectively.
+
+## Organisation
+
+The project is organised as follows:
+
+* Data preprocessing
+* Global Clustering
+* Subspace Clustering
+* Evaluation
+
+***
+Let us first load all necessary libraries for this project
+```{r}
+#If any errors are thrown while loading libraries please install the packages commented below
+#install.packages("tidyverse")
+#install.packages("caret")
+#install.packages("rpart.plot")
+#install.packages("e1071")
+library(dplyr)
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
+library(r2d3)
+library(sqldf)
+library(caret)
+library(rpart.plot)
+library(e1071)
+library(randomForest)
+library(mlbench)
+library(caret)
+library(e1071)
+
+```
+
+## Data preprocessing 
+
+Now we will step by step do the preprocessing of given data
+
+```{r}
+df <- read_rds("190426_charite_tinnitus.rds") %>%
+  arrange(.testdatum) %>%
+  group_by(.jour_nr) %>%
+  slice(1) %>%
+  ungroup() %>%
+  filter(.phase == "A") %>%
+  mutate(phqk_paniksyndrom = if_else(phqk_phqk_2a +
+                                       phqk_phqk_2b +
+                                       phqk_phqk_2c +
+                                       phqk_phqk_2d +
+                                       phqk_phqk_2e == 5, 1, 0)) %>%
+  select(.jour_nr,
+         .age,
+         acsa_acsa,
+         adsl_adsl_sum,
+         bi_erschoepfung, bi_magen, bi_glieder, bi_herz, bi_beschwerden,
+         bsf_geh, bsf_eng, bsf_aerg, bsf_an_de, bsf_mued, bsf_tnl,
+         isr_deprsyn, isr_angstsyn, isr_zwasyn, isr_somasyn, isr_essstsyn,
+         isr_zusatz, isr_isr_ges,
+         phqk_depressivitaet, phqk_paniksyndrom,
+         psq_anford, psq_anspan, psq_freude, psq_sorgen, psq_psq_sum,
+         schmerzskal_beein10, schmerzskal_haeuf10, schmerzskal_staerke10,
+         ses_ses_affektiv, ses_ses_sensorisch,
+         sf8_bp_sf36ks, sf8_gh_sf36ag, sf8_mcs8, sf8_mh_sf36pw, sf8_pcs8,
+         sf8_pf_sf36kf, sf8_re_sf36er, sf8_rp_sf36kr, sf8_sf_sf36sf, sf8_vt_sf36vit,
+         sozk_soz01_male, sozk_soz02_german, sozk_soz05_partner, sozk_soz06_married,
+         sozk_soz09_abitur, sozk_soz10_keinAbschl, sozk_soz11_job, sozk_soz18_selbstst, 
+         sozk_soz1920_krank, sozk_soz21_tindauer, sozk_soz2224_psycho, sozk_soz25_numdoc,
+         swop_sw, swop_opt, swop_pes,
+         tq_aku, tq_co, tq_em, tq_inti, tq_pb, tq_sl, tq_som, tq_tf,
+         tinskal_beein10, tinskal_haeuf10, tinskal_laut10,
+         starts_with("tlq"), -tlq_timestamp
+  ) %>%
+  drop_na()
+originaldf <- read_rds("190426_charite_tinnitus.rds")
+```
+Now lets remove 'journ.no' as it is an identifier and will not be useful for analysis.
+
+```{r}
+df_allF <- select(df,-c(.jour_nr))
+
+#Data frame with all features "Scaled" except journ no
+df_allF_scaled<-scale(df_allF)%>%data.frame()
+```
+We will find out the co related columns in the data and drop them
+
+```{r}
+correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
+
+cat("\ncorrelation with 90%:\n")
+matriz_cor <- cor(df_allF,method = "spearman")
+
+for (i in 1:nrow(matriz_cor)){
+  correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
+  matriz_cor[correlations,i] <- NA
+  
+  if(length(correlations)> 0){
+    #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
+    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations],coef=matriz_cor[i,correlations]))
+    rownames(correlated_coloumns) <- NULL
+  }
+}
+
+#No correlated columns
+
+#dropping the columns
+df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
+
+#Data frame with reduced features "Scaled"
+df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
+```
+## Elbow Method
+Elbow method for getting optimal value of k kmeans and hkmeans 
+```{r}
+set.seed(123)
+# Elbow method to get best k from k = 2 to k = 12.
+k.max <- 12
+rownames( df_noCorr_scaled ) <- seq_len( nrow( df_noCorr_scaled ) )
+wss <- sapply(1:k.max, 
+              function(k){kmeans(df_noCorr_scaled, k, nstart=50,iter.max = 15 )$tot.withinss})
+wss
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+```
+
+## Hierarchical clustering
+
+Hierarchical clustering can be done in two ways :
+1) Top Down : Start with the entire data as a cluster and break them down until each point is a cluster in itself.
+2) Bottom up : Start from individual points as clusters and merge them based on similarities until one cluster if formed.
+
+There are different ways to calculate the distance/ similarity between individual points and in between the clusters which can be a very important factor in deciding the final cluster results.
+
+So we first create a list of these methods and then create clusters for each combination.
+
+Then we can calculate the clusters. The ac value of each cluster gives the quality/ tightness of each cluster. The closer the value is to 1 the better are the results.
+
+**the agglomerative coefficient, measuring the clustering structure of the dataset.
+
+For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes.**
+```{r}
+# methods to assess inter cluster similarity
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+#distance measures
+dist_methods <- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+names(dist_methods)<- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+
+# function to compute coefficient
+final_dist_m<-list()
+final_m<-list()
+for(dist_m in dist_methods)
+{
+  dist_matrix<-dist(df_noCorr_scaled, method = dist_m)
+  for(x in m)
+  {
+    hc <-agnes(dist_matrix, method = x)
+    ac<-hc$ac
+    title<-sprintf("Distance: %s,Inter cluster Distance: %s, ac value: %f",dist_m,x,ac)
+    pltree(hc, cex = 0.6, hang = -1,main = title)
+    if(!is.nan(ac) && ac>0.95)
+    {
+      print(title)
+      final_dist_m<-c(final_dist_m,dist_m)
+      final_m<-c(final_m,x)
+    }
+  }
+}
+
+#Now we can choose the desired combination, for example: Euclidean and Ward method and then we can cut the tree to get the final clusters.
+
+dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
+hc <-agnes(dist_matrix, method = "ward")
+
+```
+## Visualisation
+
+Creating a summary data frame for capturing population mean
+```{r}
+
+feature_summary_scaled<-data.frame(df_allF_scaled%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df_allF%>%
+                              summarise_each(mean))
+```
+For visluation of clustering results we choose a radial chart.
+The bar height is the scaled value of the features of a cluster. The tooltip gives extra information about the actual feature value and the population mean for the feature.
+```{r}
+#Finally creating a data frame which can be used for the visualization.
+options(scipen = 999)
+createRadialChart<-function(cluster_scaled,cluster)
+ { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
+  rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  print(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal"))
+  return(cluster_plot_data)
+}
+
+
+initVis<-function(final_labels,no_of_clusters)
+{
+  # labelling the records 
+  df_allF_labeled<-df_allF%>%
+  mutate(label = final_labels)
+df_allF_scaled_labeled<-df_allF_scaled%>%
+  mutate(label = final_labels)
+
+# creating cluster feature vectors from obtained labels
+
+cluster_features_scaled<-data.frame(df_allF_scaled_labeled%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+cluster_features<-data.frame(df_allF_labeled%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+
+
+  for (i in seq(1:no_of_clusters))
+  {
+    plot_data<-createRadialChart(cluster_features_scaled[i,],cluster_features[i,])
+  }
+}
+
+```
+## Decision Tree
+
+Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
+Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
+
+Now to get the decision tree as a classifier intead of a regressor we need to make the predicting variable as non numeric.
+```{r}
+createDT<-function(final_labels,remove_na)
+{
+  # labelling the records 
+  df_allF_labeled<-df_allF%>%
+  mutate(label = final_labels)
+  df_string_labeled<-df_allF_labeled
+  
+  #Adding "Type" to each cluster number to make it non numeric
+  df_string_labeled$label<-sub("^","Type ",df_allF_labeled$label)
+  if(remove_na)
+  {
+    df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+  }
+  
+  trctrl <- trainControl(method = "boot", number = 10)
+  dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                     parms = list(split = "information"),
+                     trControl=trctrl,
+                     tuneLength = 10)
+  
+  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+}
+
+```
+
+
+## Random Forest
+
+supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
+We then apply random forest with the best paramters. 
+##table with optimal values after parameter tuning.
+The features are then ordered as per their mean decrease accuracy.
+```{r}
+##Tune random forest
+tuneRandomForest<-function(data){
+data$label<- as.factor(data$label)
+x <- data[,1:77]
+y <- data[,78]
+#tuning of rf
+customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
+customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+  randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
+}
+customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata)
+customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata, type = "prob")
+# train model
+control <- trainControl(method="repeatedcv", number=5, repeats=2)
+tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
+set.seed(123)
+custom <- train(label~., data=data, method=customRF,  tuneGrid=tunegrid, trControl=control)
+#summary(custom)
+plot(custom)
+print(custom)
+}
+##function call
+tuneRandomForest(df_allF_hk2_labeled)
+# tuneRandomForest(df_allF_hk4_labeled)
+# tuneRandomForest(df_allF_h2_labeled)
+# tuneRandomForest(df_allF_h4_labeled)
+# tuneRandomForest(df_allF_km2_labeled)
+# tuneRandomForest(df_allF_km4_labeled)
+# tuneRandomForest(df_allF_pckm2_labeled)
+# tuneRandomForest(df_allF_pckm4_labeled)
+# tuneRandomForest(df_allF_o2_labeled)
+# tuneRandomForest(df_allF_o4_labeled)
+# tuneRandomForest(df_allF_p2_labeled)
+# tuneRandomForest(df_allF_p4_labeled)
+##applying random forest
+applyrf<-function(data,numClusters,ntree,mtry){
+data$label<- as.factor(data$label)
+data.rf <- randomForest(formula= label ~ ., data=data, importance=TRUE,ntree=ntree,mtry=mtry,
+                        proximity=TRUE)
+print(data.rf)
+plot(data.rf)
+varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+impfeat<-importance(data.rf)
+impfeatdf<-data.frame(impfeat)
+impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
+if(numClusters==2)
+  impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
+if(numClusters==4)
+  impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
+print(impfeatorder)
+}
+##function call
+applyrf(df_allF_hk2_labeled,2,1500,5)
+# applyrf(df_allF_hk4_labeled,4,,)
+# applyrf(df_allF_h2_labeled,2,,)
+# applyrf(df_allF_h4_labeled,4,,)
+# applyrf(df_allF_km2_labeled,2,,)
+# applyrf(df_allF_km4_labeled,4,,)
+# applyrf(df_allF_pckm2_labeled,2,,)
+# applyrf(df_allF_pckm4_labeled,4,,)
+# applyrf(df_allF_o2_labeled,2,,)
+# applyrf(df_allF_o4_labeled,4,,)
+# applyrf(df_allF_p2_labeled,2,,)
+# applyrf(df_allF_p42_labeled,4,,)
+```
+
+
+# Fetching labels for k=2
+```{r}
+removeNA <- 0
+num_clusters <- 2
+# k means 
+
+
+# Hierarchical 
+h2_labels<-cutree(hc,k=num_clusters)
+initVis(h2_labels,num_clusters)
+createDT(h2_labels,removeNA)
+
+# HK means
+
+# Proclus
+removeNA <- 1
+
+```
+# Fetching labels for k=4
+```{r}
+removeNA<- 0
+num_clusters<- 4
+
+# k means
+
+# Hierarchical 
+h4_labels<-cutree(hc,k=num_clusters)
+initVis(h4_labels,num_clusters)
+# HK means
+
+# Proclus
+removeNA <- 1
+```
+
+
+
+Evaluation
+```{r}
+
+```

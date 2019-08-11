@@ -16,7 +16,7 @@ library(subspace)
 library(r2d3)
 library(tidyverse)
 
-ProClus.clusters.k2<- ProClus(df_scaled,k=2,d=70)
+ProClus.clusters.k2<- ProClus(df_noCorr_scaled,k=2,d=70)
 
 k2_cluster1<-ProClus.clusters.k2[[1]]$objects
 k2_cluster2<-ProClus.clusters.k2[[2]]$objects
