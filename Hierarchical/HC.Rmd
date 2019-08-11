@@ -119,17 +119,18 @@ Finally creating a data frame which can be used for the visualization.
 The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
 ```{r echo=TRUE}
 options(scipen = 999)
-
-f<-function(cluster)
- { cluster_plot_data<-rbind(feature_summary,feature_summary_scaled,cluster[-1])
-  cluster_name<-paste("cluster_",cluster[1])
-  rownames(cluster_plot_data)<-c("general_mean","general_mean_scaled",cluster_name)
+f<-function(cluster_scaled,cluster)
+ { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
+  rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,2]-cluster_plot_data[,3],feature=rownames(cluster_plot_data))
-  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
-  summary(cluster_plot_data)
+  print(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal"))
+  return(cluster_plot_data)
 }
-apply(cluster_features,1,f)
+for (i in seq(1:4))
+{
+  plot_data<-f(cluster_features_scaled[i,],cluster_features[i,])
+}
+
 
 ```
 Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
