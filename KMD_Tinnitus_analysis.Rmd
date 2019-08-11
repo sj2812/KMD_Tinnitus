@@ -48,6 +48,11 @@ library(sqldf)
 library(caret)
 library(rpart.plot)
 library(e1071)
+library(randomForest)
+library(mlbench)
+library(caret)
+library(e1071)
+
 ```
 
 ## Data preprocessing 
@@ -126,9 +131,22 @@ df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
 ```
-elbow method for kmeans and hkmeans and ac for hierarchical
+## Elbow Method
+Elbow method for getting optimal value of k kmeans and hkmeans 
 ```{r}
+set.seed(123)
+# Elbow method to get best k from k = 2 to k = 12.
+k.max <- 12
+rownames( df_noCorr_scaled ) <- seq_len( nrow( df_noCorr_scaled ) )
+wss <- sapply(1:k.max, 
+              function(k){kmeans(df_noCorr_scaled, k, nstart=50,iter.max = 15 )$tot.withinss})
+wss
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
 ```
+
 ## Hierarchical clustering
 
 Hierarchical clustering can be done in two ways :
@@ -261,8 +279,85 @@ createDT<-function(final_labels,remove_na)
 
 ```
 
+
+## Random Forest
+
+supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
+We then apply random forest with the best paramters. 
+##table with optimal values after parameter tuning.
+The features are then ordered as per their mean decrease accuracy.
 ```{r}
+##Tune random forest
+tuneRandomForest<-function(data){
+data$label<- as.factor(data$label)
+x <- data[,1:77]
+y <- data[,78]
+#tuning of rf
+customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
+customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+  randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
+}
+customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata)
+customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata, type = "prob")
+# train model
+control <- trainControl(method="repeatedcv", number=5, repeats=2)
+tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
+set.seed(123)
+custom <- train(label~., data=data, method=customRF,  tuneGrid=tunegrid, trControl=control)
+#summary(custom)
+plot(custom)
+print(custom)
+}
+##function call
+tuneRandomForest(df_allF_hk2_labeled)
+# tuneRandomForest(df_allF_hk4_labeled)
+# tuneRandomForest(df_allF_h2_labeled)
+# tuneRandomForest(df_allF_h4_labeled)
+# tuneRandomForest(df_allF_km2_labeled)
+# tuneRandomForest(df_allF_km4_labeled)
+# tuneRandomForest(df_allF_pckm2_labeled)
+# tuneRandomForest(df_allF_pckm4_labeled)
+# tuneRandomForest(df_allF_o2_labeled)
+# tuneRandomForest(df_allF_o4_labeled)
+# tuneRandomForest(df_allF_p2_labeled)
+# tuneRandomForest(df_allF_p4_labeled)
+##applying random forest
+applyrf<-function(data,numClusters,ntree,mtry){
+data$label<- as.factor(data$label)
+data.rf <- randomForest(formula= label ~ ., data=data, importance=TRUE,ntree=ntree,mtry=mtry,
+                        proximity=TRUE)
+print(data.rf)
+plot(data.rf)
+varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+impfeat<-importance(data.rf)
+impfeatdf<-data.frame(impfeat)
+impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
+if(numClusters==2)
+  impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
+if(numClusters==4)
+  impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
+print(impfeatorder)
+}
+##function call
+applyrf(df_allF_hk2_labeled,2,1500,5)
+# applyrf(df_allF_hk4_labeled,4,,)
+# applyrf(df_allF_h2_labeled,2,,)
+# applyrf(df_allF_h4_labeled,4,,)
+# applyrf(df_allF_km2_labeled,2,,)
+# applyrf(df_allF_km4_labeled,4,,)
+# applyrf(df_allF_pckm2_labeled,2,,)
+# applyrf(df_allF_pckm4_labeled,4,,)
+# applyrf(df_allF_o2_labeled,2,,)
+# applyrf(df_allF_o4_labeled,4,,)
+# applyrf(df_allF_p2_labeled,2,,)
+# applyrf(df_allF_p42_labeled,4,,)
 ```
+
+
 # Fetching labels for k=2
 ```{r}
 removeNA <- 0
@@ -297,10 +392,7 @@ initVis(h4_labels,num_clusters)
 removeNA <- 1
 ```
 
-random forest
-```{r}
 
-```
 
 Evaluation
 ```{r}
