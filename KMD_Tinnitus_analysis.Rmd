@@ -146,6 +146,14 @@ plot(1:k.max, wss,
      xlab="Number of clusters K",
      ylab="Total within-clusters sum of squares")
 ```
+## Kmeans
+
+
+```{r}
+
+
+```
+
 
 ## Hierarchical clustering
 
