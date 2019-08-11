@@ -76,7 +76,7 @@ Now we can choose the desired combination, for example: Euclidean and Ward metho
 
 dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
 hc <-agnes(dist_matrix, method = "ward")
-h2_labels<-cutree(hc,k=4)
+h2_labels<-cutree(hc,k=2)
 table(h2_labels)
 h4_labels<-cutree(hc,k=4)
 table(h4_labels)
@@ -126,7 +126,7 @@ f<-function(cluster_scaled,cluster)
   print(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal"))
   return(cluster_plot_data)
 }
-for (i in seq(1:4))
+for (i in seq(1:2))
 {
   plot_data<-f(cluster_features_scaled[i,],cluster_features[i,])
 }
