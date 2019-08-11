@@ -115,23 +115,25 @@ fviz_cluster(res.hk4, frame.type = "norm", frame.level = 0.68)
 #df_labeled<-select(df,-c(.jour_nr))
 df_allF_hk2_labeled<-df_allF
 df_allF_hk4_labeled<-df_allF
+df_allF_scaled_hk2_labeled<-df_allF_scaled
+df_allF_scaled_hk4_labeled<-df_allF_scaled
 df_allF_hk2_labeled$label<-res.hk$cluster
-
-View(df_allF_hk2_labeled)
+df_allF_scaled_hk2_labeled$label<-res.hk$cluster
+#View(df_allF_hk2_labeled)
 
 df_allF_hk4_labeled$label<-res.hk4$cluster
+df_allF_scaled_hk4_labeled$label<-res.hk4$cluster
+#View(df_allF_hk4_labeled)
 
-View(df_allF_hk4_labeled)
-
-cluster_features<-data.frame(df_allF_hk2_labeled%>%
+cluster_features<-data.frame(df_allF_scaled_hk2_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df_allF_hk2_labeled[1:77]%>%
+feature_summary<-data.frame(df_allF_scaled_hk2_labeled[1:77]%>%
                                summarise_each(mean))
-cluster_features<-data.frame(df_allF_hk4_labeled%>%
+cluster_features<-data.frame(df_allF_scaled_hk4_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df_allF_hk4_labeled[1:77]%>%
+feature_summary<-data.frame(df_allF_scaled_hk4_labeled[1:77]%>%
                                summarise_each(mean))
 
 ```
@@ -155,14 +157,14 @@ apply(cluster_features,1,f)
 supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
 ```{r}
 
-df_labeled$cluster <- as.factor(df_labeled$cluster)
+df_allF_hk2_labeled$label<- as.factor(df_allF_hk2_labeled$label)
 library(randomForest)
 library(mlbench)
 library(caret)
 library(e1071)
 
-x <- df_labeled[,1:73]
-y <- df_labeled[,74]
+x <- df_allF_hk2_labeled[,1:77]
+y <- df_allF_hk2_labeled[,78]
 
 #tuning of rf
 customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
@@ -179,14 +181,14 @@ customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
 control <- trainControl(method="repeatedcv", number=5, repeats=2)
 tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
 set.seed(123)
-custom <- train(cluster~., data=df_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
+custom <- train(label~., data=df_allF_hk2_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
 #summary(custom)
 plot(custom)
 print(custom)
 ```
 applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
 ```{r}
-data.rf <- randomForest(formula= cluster ~ ., data=df_labeled, importance=TRUE,ntree=1500,mtry=5,
+data.rf <- randomForest(formula= label ~ ., data=df_allF_hk2_labeled, importance=TRUE,ntree=1500,mtry=5,
                         proximity=TRUE)
 
 print(data.rf)
@@ -215,11 +217,11 @@ library(rpart.plot)
 library(e1071)
 set.seed(123) 
 
-df_string_labeled<-df_labeled
-df_string_labeled$cluster<-paste("type",df_labeled$cluster)
+df_string_labeled<-df_allF_hk2_labeled
+df_string_labeled$label<-paste("type",df_allF_hk2_labeled$label)
 
 trctrl <- trainControl(method = "boot", number = 10)
-dtree_fit <- train(cluster ~., data = df_labeled, method = "rpart",
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
                    parms = list(split = "information"),
                    trControl=trctrl,
                    tuneLength = 10)
