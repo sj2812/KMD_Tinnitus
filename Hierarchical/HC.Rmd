@@ -116,7 +116,7 @@ feature_summary<-data.frame(df_allF%>%
                                summarise_each(mean))
 ```
 Finally creating a data frame which can be used for the visualization.
-The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
+
 ```{r echo=TRUE}
 options(scipen = 999)
 f<-function(cluster_scaled,cluster)
