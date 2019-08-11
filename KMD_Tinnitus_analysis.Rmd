@@ -147,6 +147,7 @@ plot(1:k.max, wss,
      ylab="Total within-clusters sum of squares")
 ```
 
+
 ## Hierarchical clustering
 
 Hierarchical clustering can be done in two ways :
@@ -198,6 +199,48 @@ dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
 hc <-agnes(dist_matrix, method = "ward")
 
 ```
+
+## PCA-Kmeans
+
+
+```{r}
+#Create Prinicipal Components
+km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
+summary(km.pc)
+
+#Maxmimum PC for Scree and Score Plots for visualization
+maxPC <- 50
+
+screeplot(km.pc, type = "l", npcs = maxPC, main = "Screeplot of the first 30 PCs")
+
+#eigenvalues <1 would mean that the component actually explains less than a single explanatory variable 
+abline(h = 1, col="red", lty=5)
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.6)
+
+
+#No.of PCs required to explain variance
+PC_num <- 3
+PC_var <- 0.40
+
+cumpro <- cumsum(km.pc$sdev^2 / sum(km.pc$sdev^2))
+plot(cumpro[0:maxPC], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Cumulative variance plot at PC =",PC_num))
+
+
+abline(v = PC_num, col="blue", lty=5)
+abline(h = PC_var, col="blue", lty=5)
+
+legend("topleft", legend=c(paste("Cut-off @ PC",PC_num)), col=c("blue"), lty=5, cex=0.6)
+
+
+
+#Creating dataset with first PC_num PCs that we need to explain variance
+df_PC <- km.pc$x[,1:PC_num]
+
+
+
+```
+
 ## Visualisation
 
 Creating a summary data frame for capturing population mean
@@ -362,15 +405,31 @@ applyrf(df_allF_hk2_labeled,2,1500,5)
 ```{r}
 removeNA <- 0
 num_clusters <- 2
-# k means 
 
+# k means 
+kmclust2 <- kmeans(df_noCorr_scaled,num_clusters, nstart=50,iter.max = 15)
+km2_labels <- kmclust2$cluster 
+initVis(km2_labels,num_clusters)
+createDT(km2_labels,removeNA)
 
 # Hierarchical 
 h2_labels<-cutree(hc,k=num_clusters)
 initVis(h2_labels,num_clusters)
 createDT(h2_labels,removeNA)
 
+#PCA- KMEANS
+pckmclust2 <- kmeans(df_PC,num_clusters, nstart=50,iter.max = 15)
+pckm2_labels <- pckmclust2$cluster
+initVis(km2_labels,num_clusters)
+createDT(km2_labels,removeNA)
+
 # HK means
+res.hk <-hkmeans(df_noCorr_scaled, num_clusters)
+hk2_labels <- res.hk2$cluster
+initVis(hk2_labels,num_clusters)
+createDT(hk2_labels,removeNA)
+
+#Orclus
 
 # Proclus
 removeNA <- 1
@@ -382,14 +441,35 @@ removeNA<- 0
 num_clusters<- 4
 
 # k means
+kmclust4 <- kmeans(df_noCorr_scaled,num_clusters, nstart=50,iter.max = 15)
+km4_labels <- kmclust4$cluster
+initVis(km4_labels,num_clusters)
+createDT(km4_labels,removeNA)
 
 # Hierarchical 
 h4_labels<-cutree(hc,k=num_clusters)
 initVis(h4_labels,num_clusters)
 # HK means
 
+#PCA- KMEANS
+pckmclust4 <- kmeans(df_PC,num_clusters, nstart=50,iter.max = 15)
+pckm4_labels <- pckmclust4$cluster
+initVis(km2_labels,num_clusters)
+createDT(km2_labels,removeNA)
+
+#HK Means
+
+res.hk4 <-hkmeans(df_noCorr_scaled, num_clusters)
+hk4_labels <- res.hk4$cluster
+initVis(hk4_labels,num_clusters)
+createDT(hk4_labels,removeNA)
+
+#Orclus
+
+
 # Proclus
 removeNA <- 1
+
 ```
 
 
