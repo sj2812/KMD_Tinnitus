@@ -52,6 +52,9 @@ library(randomForest)
 library(mlbench)
 library(caret)
 library(e1071)
+library(rJava)
+library(subspace)
+library(orclus)
 
 ```
 
@@ -241,6 +244,29 @@ df_PC <- km.pc$x[,1:PC_num]
 
 ```
 
+## ORCLUS 
+
+```{r}
+
+
+
+# for (k in seq(10,30,by = 5)) {
+# 
+#   for (i in seq(20,60,by = 5)) {
+# 
+#     orclus_res_k2 <- orclus(x = subspace_data,k=2,l = i, k0 = k)
+#     tune_lf_sparsity[j,1] <- k
+#     tune_lf_sparsity[j,2] <- i
+#     tune_lf_sparsity[j,3] <- orclus_res_k2$sparsity.coefficient
+#     tune_lf_sparsity[j,4] <- sum(orclus_res_k2$within.projens)
+#     j <- j+1
+#   }
+# }
+
+```
+
+
+
 ## Visualisation
 
 Creating a summary data frame for capturing population mean
@@ -424,15 +450,35 @@ initVis(km2_labels,num_clusters)
 createDT(km2_labels,removeNA)
 
 # HK means
-res.hk <-hkmeans(df_noCorr_scaled, num_clusters)
+res.hk2 <-hkmeans(df_noCorr_scaled, num_clusters)
 hk2_labels <- res.hk2$cluster
 initVis(hk2_labels,num_clusters)
 createDT(hk2_labels,removeNA)
 
-#Orclus
+# Orclus
+orclus_res_k2 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 25, k0 = 20)
+ok2_labels <- orclus_res_k2$cluster
+initVis(ok2_labels,num_clusters)
+createDT(ok2_labels,removeNA)
+
+
 
 # Proclus
 removeNA <- 1
+ProClus_clusters_k2<- ProClus(df_noCorr_scaled,k=2,d=70)
+k2_cluster1<-ProClus_clusters_k2[[1]]$objects
+k2_cluster2<-ProClus_clusters_k2[[2]]$objects
+p2_labels<-c()
+for(i in k2_cluster1){
+  p2_labels[i] <- 1
+}
+for(i in k2_cluster2){
+
+  p2_labels[i]<- 2
+}
+initVis(p2_labels,num_clusters)
+createDT(p2_labels,removeNA)
+
 
 ```
 # Fetching labels for k=4
@@ -465,10 +511,36 @@ initVis(hk4_labels,num_clusters)
 createDT(hk4_labels,removeNA)
 
 #Orclus
-
+orclus_res_k4 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 20, k0 = 31)
+ok4_labels <- orclus_res_k4$cluster
+initVis(ok4_labels,num_clusters)
+createDT(ok4_labels,removeNA)
 
 # Proclus
 removeNA <- 1
+ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=70)
+k4_cluster1<-ProClus_clusters_k4[[1]]$objects
+k4_cluster2<-ProClus_clusters_k4[[2]]$objects
+k4_cluster3<-ProClus_clusters_k4[[3]]$objects
+k4_cluster4<-ProClus_clusters_k4[[4]]$objects
+p4_labels<-c()
+for(i in k4_cluster1){
+  p4_labels[i] <- 1
+}
+for(i in k4_cluster2){
+
+  p4_labels[i]<- 2
+}
+for(i in k4_cluster3){
+  p4_labels[i] <- 3
+}
+for(i in k4_cluster4){
+
+  p4_labels[i]<- 4
+}
+initVis(p4_labels,num_clusters)
+createDT(p4_labels,removeNA)
+
 
 ```
 
