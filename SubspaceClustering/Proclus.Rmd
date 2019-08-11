@@ -11,164 +11,84 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 #Sys.setenv(JAVA_HOME="C:\\Program Files\\Java\\jdk-11.0.3" )
-set.seed(123)
-
 library(rJava)
 library(subspace)
 library(r2d3)
 library(tidyverse)
-library(caret)
-library(rpart.plot)
-library(e1071)
 
-```
+ProClus.clusters.k2<- ProClus(df_noCorr_scaled,k=2,d=70)
 
-
-
-```{r}
-
-
-# K = 2
-ProClus_clusters_k2<- ProClus(df_noCorr,k=2,d=70)
-k2_cluster1<-ProClus_clusters_k2[[1]]$objects
-k2_cluster2<-ProClus_clusters_k2[[2]]$objects
-
-
-# K = 4
-ProClus_clusters_k4 <- ProClus(df_noCorr,k=4,d = 20)
-k4_cluster1<-ProClus_clusters_k4[[1]]$objects
-k4_cluster2<-ProClus_clusters_k4[[2]]$objects
-k4_cluster3<-ProClus_clusters_k4[[3]]$objects
-k4_cluster4<-ProClus_clusters_k4[[4]]$objects
-
+k2_cluster1<-ProClus.clusters.k2[[1]]$objects
+k2_cluster2<-ProClus.clusters.k2[[2]]$objects
 
 ```
 
 ```{r}
 
-labels_proclus_k2<-c()
+labels<-c()
 
 for(i in k2_cluster1){
 
-  labels_proclus_k2[i] <- 1
+  labels[i] <- 1
 
 }
 for(i in k2_cluster2){
 
-  labels_proclus_k2[i]<- 2
+  labels[i]<- 2
 
 }
-
-labels_proclus_k4<-c()
-
-for(i in k4_cluster1){
-
-  labels_proclus_k4[i] <- 1
-
-}
-for(i in k4_cluster2){
-
-  labels_proclus_k4[i]<- 2
-
-}
-
-for(i in k4_cluster3){
-
-  labels_proclus_k4[i]<- 3
-
-}
-for(i in k4_cluster4){
-
-  labels_proclus_k4[i]<- 4
-
-}
-```
-
-dataframe for each cluster since it has different dimensions
-
-
-```{r}
-
-#K = 2
-
-df_proclus_k2_cluster1 <- df_noCorr[k2_cluster1,which(ProClus_clusters_k2[[1]][["subspace"]] == TRUE)]
-df_proclus_k2_cluster2 <- df_noCorr[k2_cluster2,which(ProClus_clusters_k2[[2]][["subspace"]] == TRUE)]
-
-# K = 4
-
-df_proclus_k4_cluster1 <- df_noCorr[k4_cluster1,which(ProClus_clusters_k4[[1]][["subspace"]] == TRUE)]
-df_proclus_k4_cluster2 <- df_noCorr[k4_cluster2,which(ProClus_clusters_k4[[2]][["subspace"]] == TRUE)]
-df_proclus_k4_cluster3 <- df_noCorr[k4_cluster3,which(ProClus_clusters_k4[[3]][["subspace"]] == TRUE)]
-df_proclus_k4_cluster4 <- df_noCorr[k4_cluster4,which(ProClus_clusters_k4[[4]][["subspace"]] == TRUE)]
 
 
 ```
 
-Creating dataframe with cluster label, scaled and all Features
 
 ```{r}
 
-df_allF_p2_labeled<- df_allF%>%
-  mutate(label = labels_proclus_k2)
-df_allF_scaled_p2_labeled<-df_allF_scaled%>%
-  mutate(label = labels_proclus_k2)
+df_labeled <- df%>%
+  mutate(label = labels)
+df_labeled%>%head
 
-df_allF_p4_labeled<-df_allF%>%
-  mutate(label = labels_proclus_k4)
-df_allF_scaled_p4_labeled<-df_allF_scaled%>%
-  mutate(label = labels_proclus_k4)
+df_labeled <- df_labeled[-c(which(is.na(df_labeled$label))),]
 
-```
-
-
-
-```{r}
-cluster_features_scaled<-data.frame(df_allF_scaled_p2_labeled%>%
+cluster_features<-data.frame(df_labeled%>%
+                               select(-.jour_nr)%>%
                                group_by(label)%>%
                                summarise_each(mean))
-cluster_features<-data.frame(df_allF_p2_labeled%>%
-                               group_by(label)%>%
-                               summarise_each(mean))
-feature_summary_scaled<-data.frame(df_allF_scaled%>%
-                               summarise_each(mean))
-feature_summary<-data.frame(df_allF%>%
-                               summarise_each(mean))
+feature_summary<-data.frame(df%>%
+                              select(-.jour_nr)%>%
+                              summarise_each(mean))
 
 
 #Plotting Clusters in Radial Bar Chart
 
-#cluster_features <- cluster_features[1:2,]
+cluster_features <- cluster_features[1:2,]
 
 options(scipen = 999)
-f<-function(cluster_scaled,cluster)
- { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
-  rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
-  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-  print(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal"))
-  return(cluster_plot_data)
-}
-for (i in seq(1:2))
-{
-  plot_data<-f(cluster_features_scaled[i,],cluster_features[i,])
-}
 
+f<-function(cluster)
+{ cluster_plot_data<-rbind(feature_summary,cluster[-1])
+cluster_name<-paste("cluster_",cluster[1])
+rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+cluster_plot_data<-mutate(cluster_plot_data,mean_difference = cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser")
+}
+apply(cluster_features,1,f)
 
 
 ```
 
 ```{r}
-
-
 library(caret)
 library(rpart.plot)
 library(e1071)
 
 set.seed(123)
-df_string_labeled<-df_allF_scaled_p2_labeled
+df_string_labeled<-df_labeled
 #df_string_labeled$label <- as.character(df_string_labeled$label)
-df_string_labeled$label<-sub("^","Type ",df_allF_scaled_p2_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
 
-df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+
 
 trctrl <- trainControl(method = "boot", number = 10)
 dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
@@ -177,14 +97,13 @@ dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
                    tuneLength = 10)
 
 prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
-
 ```
 Random Forest for Proclus
 
 
 
 ```{r}
-df_allF_p2_labeled$label <- as.factor(df_allF_p2_labeled$label)
+df_labeled$label <- as.factor(df_labeled$label)
 library(randomForest)
 library(mlbench)
 library(caret)
@@ -192,8 +111,8 @@ library(e1071)
 
 #df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
 
-x <- df_allF_p2_labeled[,1:77]
-y <- df_allF_p2_labeled[,78]
+x <- df_labeled[,1:78]
+y <- df_labeled[,79]
 
 #tuning of rf
 customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
@@ -210,7 +129,7 @@ customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
 control <- trainControl(method="repeatedcv", number=5, repeats=2)
 tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
 #set.seed(123)
-custom <- train(label~., data=df_allF_p2_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
+custom <- train(label~., data=df_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
 #summary(custom)
 plot(custom)
 print(custom)
@@ -218,7 +137,164 @@ print(custom)
 applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
 
 ```{r}
-data.rf <- randomForest(formula= label ~ ., data=df_allF_p2_labeled, importance=TRUE,ntree=1000,mtry=12,
+data.rf <- randomForest(formula= label ~ ., data=df_labeled, importance=TRUE,ntree=1000,mtry=12,
+                        proximity=TRUE)
+
+print(data.rf)
+plot(data.rf)
+varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+
+impfeat<-importance(data.rf)
+
+impfeatdf<-data.frame(impfeat)
+impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
+
+getorderedfeatures<-function(numberofclusters){
+  if(numberofclusters==2)
+    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
+  if(numberofclusters==4)
+    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
+  print(impfeatorder)
+}
+getorderedfeatures(2)
+```
+Proclus with k = 4
+
+```{r}
+
+ProClus.clusters.k4 <- ProClus(df_scaled,k=4,d = 20)
+
+k4_cluster1<-ProClus.clusters.k4[[1]]$objects
+k4_cluster2<-ProClus.clusters.k4[[2]]$objects
+k4_cluster3<-ProClus.clusters.k4[[3]]$objects
+k4_cluster4<-ProClus.clusters.k4[[4]]$objects
+
+```
+
+
+```{r}
+
+labels<-c()
+
+for(i in k4_cluster1){
+
+  labels[i] <- 1
+
+}
+for(i in k4_cluster2){
+
+  labels[i]<- 2
+
+}
+
+for(i in k4_cluster3){
+
+  labels[i]<- 3
+
+}
+for(i in k4_cluster4){
+
+  labels[i]<- 4
+
+}
+
+```
+
+
+```{r}
+
+df_labeled <- df%>%
+  mutate(label = labels)
+df_scaled_labeled<-df_scaled%>%
+  mutate(label = labels)
+df_labeled%>%head
+
+#df_labeled <- df_labeled[-c(which(is.na(df_labeled$label))),]
+
+cluster_features<-data.frame(df_scaled_labeled%>%
+                               group_by(label)%>%
+                               select()%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df_scaled%>%
+                               summarise_each(mean))
+
+
+#Plotting Clusters in Radial Bar Chart
+
+cluster_features <- cluster_features[1:4,]
+
+options(scipen = 999)
+
+f<-function(cluster)
+ { cluster_plot_data<-rbind(feature_summary,cluster[-1])
+  cluster_name<-paste("cluster_",cluster[1])
+  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+}
+apply(cluster_features,1,f)
+
+
+```
+
+```{r}
+library(caret)
+library(rpart.plot)
+library(e1071)
+
+set.seed(123)
+df_string_labeled<-df_labeled
+#df_string_labeled$label <- as.character(df_string_labeled$label)
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+
+df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+
+trctrl <- trainControl(method = "boot", number = 10)
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10)
+
+prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+```
+Random Forest for Proclus
+
+
+```{r}
+df_labeled$label <- as.factor(df_labeled$label)
+library(randomForest)
+library(mlbench)
+library(caret)
+library(e1071)
+
+x <- df_labeled[,1:78]
+y <- df_labeled[,79]
+
+#tuning of rf
+customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
+customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+  randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
+}
+customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata)
+customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata, type = "prob")
+# train model
+control <- trainControl(method="repeatedcv", number=5, repeats=2)
+tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
+#set.seed(123)
+custom <- train(label~., data=df_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
+#summary(custom)
+plot(custom)
+print(custom)
+```
+applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
+
+```{r}
+data.rf <- randomForest(formula= label ~ ., data=df_labeled, importance=TRUE,ntree=1000,mtry=12,
                         proximity=TRUE)
 
 print(data.rf)
@@ -241,152 +317,23 @@ getorderedfeatures(2)
 ```
 
 
-```{r}
-
-
-```
-
 
 ```{r}
+library(caret)
+library(rpart.plot)
+library(e1071)
+df_string_labeled<-df_labeled
+#df_string_labeled$label <- as.character(df_string_labeled$label)
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
 
+#df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
 
+trctrl <- trainControl(method = "boot", number = 10)
+dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                   parms = list(split = "information"),
+                   trControl=trctrl,
+                   tuneLength = 10)
 
-```
-
-
-```{r}
-
-# df_allF_p2_labeled <- df%>%
-#   mutate(label = labels)
-# df_scaled_labeled<-df_scaled%>%
-#   mutate(label = labels)
-# df_labeled%>%head
-# 
-# #df_labeled <- df_labeled[-c(which(is.na(df_labeled$label))),]
-# 
-# cluster_features<-data.frame(df_scaled_labeled%>%
-#                                group_by(label)%>%
-#                                select()%>%
-#                                summarise_each(mean))
-# feature_summary<-data.frame(df_scaled%>%
-#                                summarise_each(mean))
-# 
-# 
-# #Plotting Clusters in Radial Bar Chart
-# 
-# cluster_features <- cluster_features[1:4,]
-# 
-# options(scipen = 999)
-# 
-# f<-function(cluster)
-#  { cluster_plot_data<-rbind(feature_summary,cluster[-1])
-#   cluster_name<-paste("cluster_",cluster[1])
-#   rownames(cluster_plot_data)<-c("general_mean",cluster_name)
-#   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-#   cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
-#   r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
-# }
-# apply(cluster_features,1,f)
-
-
-```
-
-```{r}
-# library(caret)
-# library(rpart.plot)
-# library(e1071)
-# 
-# set.seed(123)
-# df_string_labeled<-df_labeled
-# #df_string_labeled$label <- as.character(df_string_labeled$label)
-# df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
-# 
-# df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
-# 
-# trctrl <- trainControl(method = "boot", number = 10)
-# dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
-#                    parms = list(split = "information"),
-#                    trControl=trctrl,
-#                    tuneLength = 10)
-# 
-# prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
-```
-Random Forest for Proclus
-
-
-```{r}
-# df_labeled$label <- as.factor(df_labeled$label)
-# library(randomForest)
-# library(mlbench)
-# library(caret)
-# library(e1071)
-# 
-# x <- df_labeled[,1:78]
-# y <- df_labeled[,79]
-# 
-# #tuning of rf
-# customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
-# customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
-# customRF$grid <- function(x, y, len = NULL, search = "grid") {}
-# customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-#   randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
-# }
-# customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
-#   predict(modelFit, newdata)
-# customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
-#   predict(modelFit, newdata, type = "prob")
-# # train model
-# control <- trainControl(method="repeatedcv", number=5, repeats=2)
-# tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
-# #set.seed(123)
-# custom <- train(label~., data=df_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
-# #summary(custom)
-# plot(custom)
-# print(custom)
-```
-applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
-
-```{r}
-# data.rf <- randomForest(formula= label ~ ., data=df_labeled, importance=TRUE,ntree=1000,mtry=12,
-#                         proximity=TRUE)
-# 
-# print(data.rf)
-# plot(data.rf)
-# varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
-# 
-# impfeat<-importance(data.rf)
-# 
-# impfeatdf<-data.frame(impfeat)
-# impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
-# 
-# getorderedfeatures<-function(numberofclusters){
-#   if(numberofclusters==2)
-#     impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
-#   if(numberofclusters==4)
-#     impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
-#   print(impfeatorder)
-# }
-# getorderedfeatures(2)
-```
-
-
-
-```{r}
-# library(caret)
-# library(rpart.plot)
-# library(e1071)
-# df_string_labeled<-df_labeled
-# #df_string_labeled$label <- as.character(df_string_labeled$label)
-# df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
-# 
-# #df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
-# 
-# trctrl <- trainControl(method = "boot", number = 10)
-# dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
-#                    parms = list(split = "information"),
-#                    trControl=trctrl,
-#                    tuneLength = 10)
-# 
-# prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 ```
 
