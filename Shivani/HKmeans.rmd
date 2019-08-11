@@ -130,10 +130,10 @@ cluster_features<-data.frame(df_allF_scaled_hk2_labeled%>%
                                summarise_each(mean))
 feature_summary<-data.frame(df_allF_scaled_hk2_labeled[1:77]%>%
                                summarise_each(mean))
-cluster_features<-data.frame(df_allF_scaled_hk4_labeled%>%
+cluster_features4<-data.frame(df_allF_scaled_hk4_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df_allF_scaled_hk4_labeled[1:77]%>%
+feature_summary4<-data.frame(df_allF_scaled_hk4_labeled[1:77]%>%
                                summarise_each(mean))
 
 ```
