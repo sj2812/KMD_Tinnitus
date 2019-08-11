@@ -212,6 +212,7 @@ getorderedfeatures<-function(numberofclusters){
 getorderedfeatures(2)
 
 
+
 ```
 ```{r}
 library(caret)
