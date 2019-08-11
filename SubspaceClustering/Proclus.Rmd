@@ -11,84 +11,164 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 #Sys.setenv(JAVA_HOME="C:\\Program Files\\Java\\jdk-11.0.3" )
+set.seed(123)
+
 library(rJava)
 library(subspace)
 library(r2d3)
 library(tidyverse)
+library(caret)
+library(rpart.plot)
+library(e1071)
 
-ProClus.clusters.k2<- ProClus(df_noCorr_scaled,k=2,d=70)
+```
 
-k2_cluster1<-ProClus.clusters.k2[[1]]$objects
-k2_cluster2<-ProClus.clusters.k2[[2]]$objects
+
+
+```{r}
+
+
+# K = 2
+ProClus_clusters_k2<- ProClus(df_noCorr,k=2,d=70)
+k2_cluster1<-ProClus_clusters_k2[[1]]$objects
+k2_cluster2<-ProClus_clusters_k2[[2]]$objects
+
+
+# K = 4
+ProClus_clusters_k4 <- ProClus(df_noCorr,k=4,d = 20)
+k4_cluster1<-ProClus_clusters_k4[[1]]$objects
+k4_cluster2<-ProClus_clusters_k4[[2]]$objects
+k4_cluster3<-ProClus_clusters_k4[[3]]$objects
+k4_cluster4<-ProClus_clusters_k4[[4]]$objects
+
 
 ```
 
 ```{r}
 
-labels<-c()
+labels_proclus_k2<-c()
 
 for(i in k2_cluster1){
 
-  labels[i] <- 1
+  labels_proclus_k2[i] <- 1
 
 }
 for(i in k2_cluster2){
 
-  labels[i]<- 2
+  labels_proclus_k2[i]<- 2
 
 }
 
+labels_proclus_k4<-c()
 
+for(i in k4_cluster1){
+
+  labels_proclus_k4[i] <- 1
+
+}
+for(i in k4_cluster2){
+
+  labels_proclus_k4[i]<- 2
+
+}
+
+for(i in k4_cluster3){
+
+  labels_proclus_k4[i]<- 3
+
+}
+for(i in k4_cluster4){
+
+  labels_proclus_k4[i]<- 4
+
+}
 ```
+
+dataframe for each cluster since it has different dimensions
 
 
 ```{r}
 
-df_labeled <- df%>%
-  mutate(label = labels)
-df_labeled%>%head
+#K = 2
 
-df_labeled <- df_labeled[-c(which(is.na(df_labeled$label))),]
+df_proclus_k2_cluster1 <- df_noCorr[k2_cluster1,which(ProClus_clusters_k2[[1]][["subspace"]] == TRUE)]
+df_proclus_k2_cluster2 <- df_noCorr[k2_cluster2,which(ProClus_clusters_k2[[2]][["subspace"]] == TRUE)]
 
-cluster_features<-data.frame(df_labeled%>%
-                               select(-.jour_nr)%>%
+# K = 4
+
+df_proclus_k4_cluster1 <- df_noCorr[k4_cluster1,which(ProClus_clusters_k4[[1]][["subspace"]] == TRUE)]
+df_proclus_k4_cluster2 <- df_noCorr[k4_cluster2,which(ProClus_clusters_k4[[2]][["subspace"]] == TRUE)]
+df_proclus_k4_cluster3 <- df_noCorr[k4_cluster3,which(ProClus_clusters_k4[[3]][["subspace"]] == TRUE)]
+df_proclus_k4_cluster4 <- df_noCorr[k4_cluster4,which(ProClus_clusters_k4[[4]][["subspace"]] == TRUE)]
+
+
+```
+
+Creating dataframe with cluster label, scaled and all Features
+
+```{r}
+
+df_allF_p2_labeled<- df_allF%>%
+  mutate(label = labels_proclus_k2)
+df_allF_scaled_p2_labeled<-df_allF_scaled%>%
+  mutate(label = labels_proclus_k2)
+
+df_allF_p4_labeled<-df_allF%>%
+  mutate(label = labels_proclus_k4)
+df_allF_scaled_p4_labeled<-df_allF_scaled%>%
+  mutate(label = labels_proclus_k4)
+
+```
+
+
+
+```{r}
+cluster_features_scaled<-data.frame(df_allF_scaled_p2_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-feature_summary<-data.frame(df%>%
-                              select(-.jour_nr)%>%
-                              summarise_each(mean))
+cluster_features<-data.frame(df_allF_p2_labeled%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+feature_summary_scaled<-data.frame(df_allF_scaled%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df_allF%>%
+                               summarise_each(mean))
 
 
 #Plotting Clusters in Radial Bar Chart
 
-cluster_features <- cluster_features[1:2,]
+#cluster_features <- cluster_features[1:2,]
 
 options(scipen = 999)
-
-f<-function(cluster)
-{ cluster_plot_data<-rbind(feature_summary,cluster[-1])
-cluster_name<-paste("cluster_",cluster[1])
-rownames(cluster_plot_data)<-c("general_mean",cluster_name)
-cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-cluster_plot_data<-mutate(cluster_plot_data,mean_difference = cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
-r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser")
+f<-function(cluster_scaled,cluster)
+ { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
+  rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  print(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal"))
+  return(cluster_plot_data)
 }
-apply(cluster_features,1,f)
+for (i in seq(1:2))
+{
+  plot_data<-f(cluster_features_scaled[i,],cluster_features[i,])
+}
+
 
 
 ```
 
 ```{r}
+
+
 library(caret)
 library(rpart.plot)
 library(e1071)
 
 set.seed(123)
-df_string_labeled<-df_labeled
+df_string_labeled<-df_allF_scaled_p2_labeled
 #df_string_labeled$label <- as.character(df_string_labeled$label)
-df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+df_string_labeled$label<-sub("^","Type ",df_allF_scaled_p2_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
 
-
+#df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
 
 trctrl <- trainControl(method = "boot", number = 10)
 dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
@@ -162,41 +242,13 @@ Proclus with k = 4
 
 ```{r}
 
-ProClus.clusters.k4 <- ProClus(df_scaled,k=4,d = 20)
-
-k4_cluster1<-ProClus.clusters.k4[[1]]$objects
-k4_cluster2<-ProClus.clusters.k4[[2]]$objects
-k4_cluster3<-ProClus.clusters.k4[[3]]$objects
-k4_cluster4<-ProClus.clusters.k4[[4]]$objects
 
 ```
 
 
 ```{r}
 
-labels<-c()
 
-for(i in k4_cluster1){
-
-  labels[i] <- 1
-
-}
-for(i in k4_cluster2){
-
-  labels[i]<- 2
-
-}
-
-for(i in k4_cluster3){
-
-  labels[i]<- 3
-
-}
-for(i in k4_cluster4){
-
-  labels[i]<- 4
-
-}
 
 ```
 
