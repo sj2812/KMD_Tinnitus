@@ -158,7 +158,7 @@ for (i in seq(1:2))
 
 supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
 ```{r}
-
+#bb
 df_allF_hk2_labeled$label<- as.factor(df_allF_hk2_labeled$label)
 library(randomForest)
 library(mlbench)
