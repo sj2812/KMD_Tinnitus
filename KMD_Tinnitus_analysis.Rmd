@@ -107,6 +107,7 @@ df_allF <- select(df,-c(.jour_nr))
 #Data frame with all features "Scaled" except journ no
 df_allF_scaled<-scale(df_allF)%>%data.frame()
 ```
+
 We will find out the co related columns in the data and drop them
 
 ```{r}
@@ -151,6 +152,47 @@ plot(1:k.max, wss,
 ```
 
 
+## Bootstrap Sampling
+
+Create different samples (with replacement) of data from the original dataset. With varying data (different samples), we will can check if the clustering results are stable or not. So we are plotting a Box-plot for each values of K against "Total within sum of square errors (totwss)". We need to check if the result follows the same trend as the original elbow method does, or there is a significant change in the plot. 
+
+```{r}
+#No. of Bootsamples to be created
+bootsamplesize <- seq(1:100)
+
+max_k <-seq(1:12) 
+wss.boot <- data.frame()
+
+set.seed(123)
+for(i in bootsamplesize){
+
+  #Create Index with replacement
+  index <- sample(1:nrow(df_noCorr_scaled),nrow(df_noCorr_scaled),replace = T)
+  
+  #create samples from the index
+  dfSample <-  df_noCorr_scaled[index,]
+  
+  #run for each value of k for the current sample  
+  for(k in max_k){
+      
+    kmclust <- kmeans(dfSample,k,nstart=50,iter.max = 25)
+    
+    #Store the data (1 row) of current K and withinss in the dataframe  
+    wss.boot <- rbind(wss.boot, c(k,kmclust$tot.withinss))
+    
+  }
+}
+
+colnames(wss.boot) <- c('k','totwss')
+
+
+#Plot the Data
+boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
+
+
+```
+
+
 ## Hierarchical clustering
 
 Hierarchical clustering can be done in two ways :
@@ -167,6 +209,7 @@ Then we can calculate the clusters. The ac value of each cluster gives the quali
 
 For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes.**
 ```{r}
+set.seed(123)
 # methods to assess inter cluster similarity
 m <- c( "average", "single", "complete", "ward")
 names(m) <- c( "average", "single", "complete", "ward")
@@ -204,6 +247,7 @@ hc <-agnes(dist_matrix, method = "ward")
 ```
 
 ## PCA-Kmeans
+Prinicipal Component Analysis is used for High Dimensional Dataset to convert the possibly correlated features into linearly uncorrelated variables called Principal Components (PCs). The first Principal Component (PC) explains the most amount of variance in the data. The PCs are arranged in the decreasing order of variance explained. This can be seen in Scree Plots. To explain certain amount of variance of the data, we need to choose the subsequent amount of the PC number. This can be done using the help of the Score Plots. After selecting first n PCs, we need to save that in another dataframe and then we can perform our clustering algorithm on the new transformed data.
 
 
 ```{r}
@@ -214,7 +258,7 @@ summary(km.pc)
 #Maxmimum PC for Scree and Score Plots for visualization
 maxPC <- 50
 
-screeplot(km.pc, type = "l", npcs = maxPC, main = "Screeplot of the first 30 PCs")
+screeplot(km.pc, type = "l", npcs = maxPC, main = paste("Screeplot of the first ", maxPC," PCs"))
 
 #eigenvalues <1 would mean that the component actually explains less than a single explanatory variable 
 abline(h = 1, col="red", lty=5)
@@ -223,11 +267,11 @@ legend("topright", legend=c("Eigenvalue = 1"),
 
 
 #No.of PCs required to explain variance
-PC_num <- 3
-PC_var <- 0.40
+PC_num <- 18
+PC_var <- 0.70
 
 cumpro <- cumsum(km.pc$sdev^2 / sum(km.pc$sdev^2))
-plot(cumpro[0:maxPC], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Cumulative variance plot at PC =",PC_num))
+plot(cumpro[0:maxPC], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Score plot of variance =", PC_var*100, "% at PC =",PC_num))
 
 
 abline(v = PC_num, col="blue", lty=5)
@@ -236,10 +280,8 @@ abline(h = PC_var, col="blue", lty=5)
 legend("topleft", legend=c(paste("Cut-off @ PC",PC_num)), col=c("blue"), lty=5, cex=0.6)
 
 
-
 #Creating dataset with first PC_num PCs that we need to explain variance
 df_PC <- km.pc$x[,1:PC_num]
-
 
 
 ```
@@ -324,7 +366,9 @@ Let us now use a Decision Tree algorithm to identify which features are the most
 Now to get the decision tree as a classifier intead of a regressor we need to make the predicting variable as non numeric.
 ```{r}
 createDT<-function(final_labels,remove_na)
-{
+{ 
+  set.seed(123)
+  
   # labelling the records 
   df_allF_labeled<-df_allF%>%
   mutate(label = final_labels)
@@ -356,6 +400,7 @@ We then apply random forest with the best paramters.
 ##table with optimal values after parameter tuning.
 The features are then ordered as per their mean decrease accuracy.
 ```{r}
+set.seed(123)
 ##Tune random forest
 tuneRandomForest<-function(data){
 data$label<- as.factor(data$label)
@@ -426,44 +471,53 @@ applyrf(df_allF_hk2_labeled,2,1500,5)
 # applyrf(df_allF_p42_labeled,4,,)
 ```
 
+## Performing Radial Chart Visualisation and Decision Tree for selected Cluster numbers
+First the Labels are fetched for each clustering algorithm, which is then passed into the initVis function alongwith the cluster number to create Radial Chart visualisations. Decision tree function is then called to visualize the decision points that can be used by the user to ask the relevant questions to come to a sub-group of Tinnitus.
 
-# Fetching labels for k=2
+# Fetching labels for k=2 
+
 ```{r}
-removeNA <- 0
+set.seed(123)
+removeNA <- 0 #Flag
 num_clusters <- 2
 
 # k means 
+set.seed(123)
 kmclust2 <- kmeans(df_noCorr_scaled,num_clusters, nstart=50,iter.max = 15)
 km2_labels <- kmclust2$cluster 
 initVis(km2_labels,num_clusters)
 createDT(km2_labels,removeNA)
 
-# Hierarchical 
+# Hierarchical
+set.seed(123)
 h2_labels<-cutree(hc,k=num_clusters)
 initVis(h2_labels,num_clusters)
 createDT(h2_labels,removeNA)
 
 #PCA- KMEANS
+set.seed(123)
 pckmclust2 <- kmeans(df_PC,num_clusters, nstart=50,iter.max = 15)
 pckm2_labels <- pckmclust2$cluster
 initVis(km2_labels,num_clusters)
 createDT(km2_labels,removeNA)
 
 # HK means
+set.seed(123)
 res.hk2 <-hkmeans(df_noCorr_scaled, num_clusters)
 hk2_labels <- res.hk2$cluster
 initVis(hk2_labels,num_clusters)
 createDT(hk2_labels,removeNA)
 
 # Orclus
+set.seed(123)
 orclus_res_k2 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 25, k0 = 20)
 ok2_labels <- orclus_res_k2$cluster
 initVis(ok2_labels,num_clusters)
 createDT(ok2_labels,removeNA)
 
 
-
 # Proclus
+set.seed(123)
 removeNA <- 1
 ProClus_clusters_k2<- ProClus(df_noCorr_scaled,k=2,d=70)
 k2_cluster1<-ProClus_clusters_k2[[1]]$objects
@@ -481,42 +535,49 @@ createDT(p2_labels,removeNA)
 
 
 ```
+
 # Fetching labels for k=4
 ```{r}
+set.seed(123)
 removeNA<- 0
 num_clusters<- 4
 
 # k means
+set.seed(123)
 kmclust4 <- kmeans(df_noCorr_scaled,num_clusters, nstart=50,iter.max = 15)
 km4_labels <- kmclust4$cluster
 initVis(km4_labels,num_clusters)
 createDT(km4_labels,removeNA)
 
-# Hierarchical 
+# Hierarchical
+set.seed(123)
 h4_labels<-cutree(hc,k=num_clusters)
 initVis(h4_labels,num_clusters)
 # HK means
 
 #PCA- KMEANS
+set.seed(123)
 pckmclust4 <- kmeans(df_PC,num_clusters, nstart=50,iter.max = 15)
 pckm4_labels <- pckmclust4$cluster
 initVis(km2_labels,num_clusters)
 createDT(km2_labels,removeNA)
 
 #HK Means
-
+set.seed(123)
 res.hk4 <-hkmeans(df_noCorr_scaled, num_clusters)
 hk4_labels <- res.hk4$cluster
 initVis(hk4_labels,num_clusters)
 createDT(hk4_labels,removeNA)
 
 #Orclus
+set.seed(123)
 orclus_res_k4 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 20, k0 = 31)
 ok4_labels <- orclus_res_k4$cluster
 initVis(ok4_labels,num_clusters)
 createDT(ok4_labels,removeNA)
 
 # Proclus
+set.seed(123)
 removeNA <- 1
 ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=70)
 k4_cluster1<-ProClus_clusters_k4[[1]]$objects
