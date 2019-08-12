@@ -4,10 +4,12 @@ library("clValid")
 
 
 evaluate<-function(data){
+  View(data)
   result_set<-vector("list", 3)
-  result_set[1]<-dunn(clusters = data[78], Data=df_allF_scaled)
-  result_set[2]<-connectivity(distance = NULL, data[78], Data = df_allF_scaled, neighbSize = 10, method = "euclidean")
-  result_set[3]<-compactness(df_allF_scaled, data[78])
+  result_set[1]<-dunn(clusters = data$label, Data=df_allF_scaled)
+  result_set[2]<-connectivity(distance = NULL, data$label, Data = df_allF_scaled, neighbSize = 10, method = "euclidean")
+  result_set[3]<-compactness(df_allF_scaled, data$label)
+  print(result_set)
   return(result_set)
 }
 

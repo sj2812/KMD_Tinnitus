@@ -55,6 +55,8 @@ library(e1071)
 library(rJava)
 library(subspace)
 library(orclus)
+library(diceR)
+library("clValid")
 
 ```
 
@@ -136,7 +138,7 @@ df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
 ```
 ## Elbow Method
-Elbow method for getting optimal value of k kmeans and hkmeans 
+Elbow method for getting optimal value of k. The idea behind elbow method is to to define number of clusters such that the total within-cluster sum of square (WSS) is minimized. The value of chosen k is such that adding another cluster does not affect the overall wss much.
 ```{r}
 set.seed(123)
 # Elbow method to get best k from k = 2 to k = 12.
@@ -633,6 +635,28 @@ createDT(p4_labels,removeNA)
 
 
 Evaluation
+Dunn Index: It is the ratio of minimum of this pairwise distance as the inter-cluster separation (min.separation) to the maximal intra-cluster distance (i.e maximum diameter) as the intra-cluster compactness.If the data set contains compact and well-separated clusters, the diameter of the clusters is expected to be small and the distance between the clusters is expected to be large. Thus, Dunn index should be maximized.
+Connectivity: corresponds to what extent items are placed in the same cluster as their nearest neighbors in the data space. The connectivity has a value between 0 and infinity and should be minimized.
+Compactness or cluster cohesion: Measures how close are the objects within the same cluster. A lower within-cluster variation is an indicator of a good compactness (i.e.a good clustering). Smaller values indicate a better clustering structure.
 ```{r}
+evaluate<-function(data){
+  View(data)
+  result_set<-vector("list", 3)
+  result_set[1]<-dunn(clusters = data$label, Data=df_allF_scaled)
+  result_set[2]<-connectivity(distance = NULL, data$label, Data = df_allF_scaled, neighbSize = 10, method = "euclidean")
+  result_set[3]<-compactness(df_allF_scaled, data$label)
+  print(result_set)
+  return(result_set)
+}
 
+
+kmeans_result_2<-evaluate(df_allF_scaled_km2_labeled)
+hkmeans_result_2<-evaluate(df_allF_scaled_hk2_labeled)
+hc_result_2<-evaluate(df_allF_scaled_hc2_labeled)
+pcakmeans_result_2<-evaluate(df_allF_scaled_pckm2_labeled)
+
+kmeans_result_4<-evaluate(df_allF_scaled_km4_labeled)
+hkmeans_result_4<-evaluate(df_allF_scaled_hk4_labeled)
+hc_result_4<-evaluate(df_allF_scaled_hc4_labeled)
+pcakmeans_result_2<-evaluate(df_allF_scaled_pckm4_labeled)
 ```
