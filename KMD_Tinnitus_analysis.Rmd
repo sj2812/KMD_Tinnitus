@@ -287,10 +287,20 @@ df_PC <- km.pc$x[,1:PC_num]
 ```
 
 ## ORCLUS 
+To perform subspace clustering where the clusters are concentrated in different cluster
+specific subspaces of the data.
+
+Orclus is done with respect to 3 steps:
+1) Assign : The database is partitioned into k0 current clusters by assigning each point to its closest                 seed. In the process of partitioning, the distance of a database point to seed is measured in               the subspace. At the end of this procedure each seed is replaced by the centroid of the cluster             which was just created.
+2) FindVectors : This is to find the subspace of dimensionality l for each current cluster.
+3) Merge: During a given iteration, the Merge phase reduces the number of clusters from k0 to k.
+
+The quality of the clustering can be measured by the sparsity coefficient and within.proj parametes of cluster results. The within projection parameter give the sse of each cluster. According to these values we have to select the cluster in lower dimenstion.
+
 
 ```{r}
 
-
+#Represents the tuning of clusters according to quality measures
 
 # for (k in seq(10,30,by = 5)) {
 # 
@@ -305,8 +315,31 @@ df_PC <- km.pc$x[,1:PC_num]
 #   }
 # }
 
-```
+k4_tuning_dataset <- read_csv("inital_tune_l_sparsity.csv")
 
+```
+##PROCLUS
+
+Projected subspace Clustering is a method with uses Kmediods to cluster the high dimensional data. It uses greedy method to find a set of medioods that represents the cluster. These mediods are iteratively selected until we get perfect set of mediods with cardinality d0. The dimensions of each cluster can differ, which means it only selects the dimension the represents that particular cluster.In iterative phase, the quality of clusters are also refined before the final results. Proclus is robust to outlier.
+
+
+```{r}
+
+#For K = 2
+ProClus_clusters_k2<- ProClus(df_noCorr_scaled,k=2,d=70)
+#Getting each cluster elements
+k2_cluster1<-ProClus_clusters_k2[[1]]$objects
+k2_cluster2<-ProClus_clusters_k2[[2]]$objects
+
+# For K = 4
+ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=70)
+#Getting each cluster elements
+k4_cluster1<-ProClus_clusters_k4[[1]]$objects
+k4_cluster2<-ProClus_clusters_k4[[2]]$objects
+k4_cluster3<-ProClus_clusters_k4[[3]]$objects
+k4_cluster4<-ProClus_clusters_k4[[4]]$objects
+
+```
 
 
 ## Visualisation
@@ -519,9 +552,6 @@ createDT(ok2_labels,removeNA)
 # Proclus
 set.seed(123)
 removeNA <- 1
-ProClus_clusters_k2<- ProClus(df_noCorr_scaled,k=2,d=70)
-k2_cluster1<-ProClus_clusters_k2[[1]]$objects
-k2_cluster2<-ProClus_clusters_k2[[2]]$objects
 p2_labels<-c()
 for(i in k2_cluster1){
   p2_labels[i] <- 1
@@ -579,11 +609,6 @@ createDT(ok4_labels,removeNA)
 # Proclus
 set.seed(123)
 removeNA <- 1
-ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=70)
-k4_cluster1<-ProClus_clusters_k4[[1]]$objects
-k4_cluster2<-ProClus_clusters_k4[[2]]$objects
-k4_cluster3<-ProClus_clusters_k4[[3]]$objects
-k4_cluster4<-ProClus_clusters_k4[[4]]$objects
 p4_labels<-c()
 for(i in k4_cluster1){
   p4_labels[i] <- 1
