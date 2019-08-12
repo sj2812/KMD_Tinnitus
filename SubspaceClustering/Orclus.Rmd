@@ -19,37 +19,33 @@ library(ggvis)
 
 set.seed(123)
 
-subspace_data <- df_noCorr
+subspace_data <- df_scaled
 tune_lf_sparsity<- data.frame(k = numeric(),dim = numeric(),sparsity = numeric(),proj = numeric())
 
 j<-1
 
-orclus_res_k2 <- orclus(x = subspace_data,k=2,l = 25, k0 = 20)
-orclus_res_k4 <- orclus(x = subspace_data,k=4,l = 20, k0 = 31)
+for (k in seq(40,50)) {
+  
+  for (i in seq(10,60)) {
+    
+    orclus.res.k2 <- orclus(x = subspace_data,k=4,l = i, k0 = k)
+    tune_lf_sparsity[j,1] <- k
+    tune_lf_sparsity[j,2] <- i
+    tune_lf_sparsity[j,3] <- orclus.res.k2$sparsity.coefficient
+    tune_lf_sparsity[j,4] <- sum(orclus.res.k2$within.projens)
+    j <- j+1
+  }
+}
 
 
-# for (k in seq(10,30,by = 5)) {
-# 
-#   for (i in seq(20,60,by = 5)) {
-# 
-#     orclus_res_k2 <- orclus(x = subspace_data,k=2,l = i, k0 = k)
-#     tune_lf_sparsity[j,1] <- k
-#     tune_lf_sparsity[j,2] <- i
-#     tune_lf_sparsity[j,3] <- orclus_res_k2$sparsity.coefficient
-#     tune_lf_sparsity[j,4] <- sum(orclus_res_k2$within.projens)
-#     j <- j+1
-#   }
-# }
 
 ```
 
 
 ```{r}
 
-orclus_labels_k2 <- orclus_res_k2$cluster
-
-orclus_labels_k4 <- orclus_res_k4$cluster
-#head(orclus_labels_k2, n = 50)
+orclus_labels <- orclus.res.k2$cluster
+head(orclus_labels, n = 50)
 
 ```
 
@@ -57,21 +53,15 @@ orclus_labels_k4 <- orclus_res_k4$cluster
 ```{r}
 
 
-df_allF_o2_labeled<- df_allF%>%
-  mutate(label = orclus_labels_k2)
-df_allF_scaled_o2_labeled<-df_allF_scaled%>%
-  mutate(label = orclus_labels_k2)
-
-df_allF_o4_labeled<-df_allF%>%
-  mutate(label = orclus_labels_k4)
-df_allF_scaled_o4_labeled<-df_allF_scaled%>%
-  mutate(label = orclus_labels_k4)
+df_labeled <- df%>%
+  mutate(label = orclus_labels)
+df_labeled%>%head
 
 ```
 
-Grouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
+rouping the data based on the assigned labels and splitting into one data frame for each group.(extra step)
 ```{r}
-df_grouped<-df_allF_o2_labeled%>%
+df_grouped<-df_labeled%>%
   group_by(label)
 df_split<-group_split(df_grouped)
 
@@ -80,22 +70,21 @@ df_split<-group_split(df_grouped)
 The .journ_nr column is like an identifier for each record and is not significant for the cluster discription. So dropping that column. and then getting a summary of each cluster(group) as "cluster features"
 Also calculating the general population summary for each feature as "feature summary".
 ```{r}
+#df_labeled <- df_labeled[-c(which(is.na(df_labeled$label))),]
 
-cluster_features_scaled<-data.frame(df_allF_scaled_o2_labeled%>%
+cluster_features<-data.frame(df_labeled%>%
+                               select(-.jour_nr)%>%
                                group_by(label)%>%
                                summarise_each(mean))
-cluster_features<-data.frame(df_allF_o2_labeled%>%
-                               group_by(label)%>%
+feature_summary<-data.frame(df%>%
+                               select(-.jour_nr)%>%
                                summarise_each(mean))
-feature_summary_scaled<-data.frame(df_allF_scaled%>%
-                               summarise_each(mean))
-feature_summary<-data.frame(df_allF%>%
-                               summarise_each(mean))
+
 
 
 #Plotting Clusters in Radial Bar Chart
 
-#cluster_features <- cluster_features[1:2,]
+cluster_features <- cluster_features[1:2,]
 
 ```
 
@@ -103,20 +92,17 @@ feature_summary<-data.frame(df_allF%>%
 Finally creating a data frame which can be used for the visualization.
 The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
 ```{r echo=TRUE}
-
 options(scipen = 999)
-f<-function(cluster_scaled,cluster)
- { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
-  rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
-  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-  print(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal"))
-  return(cluster_plot_data)
-}
-for (i in seq(1:2))
-{
-  plot_data<-f(cluster_features_scaled[i,],cluster_features[i,])
-}
 
+f<-function(cluster)
+ { cluster_plot_data<-rbind(feature_summary,cluster[-1])
+  cluster_name<-paste("cluster_",cluster[1])
+  rownames(cluster_plot_data)<-c("general_mean",cluster_name)
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
+  cluster_plot_data<-mutate(cluster_plot_data,mean_difference =   cluster_plot_data[,1]-cluster_plot_data[,2],feature=rownames(cluster_plot_data))
+  r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+}
+apply(cluster_features,1,f)
 
 ```
 
@@ -128,9 +114,9 @@ library(rpart.plot)
 library(e1071)
 
 set.seed(123)
-df_string_labeled<-df_allF_scaled_o2_labeled
+df_string_labeled<-df_labeled
 #df_string_labeled$label <- as.character(df_string_labeled$label)
-df_string_labeled$label<-sub("^","Type ",df_allF_scaled_o2_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
+df_string_labeled$label<-sub("^","Type ",df_labeled$label) #Adding "Type" to each cluster number to make it                                                             #non numeric
 
 #df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
 
@@ -147,14 +133,14 @@ prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 RF
 
 ```{r}
-df_allF_scaled_o2_labeled$label <- as.factor(df_allF_scaled_o2_labeled$label)
+df_labeled$label <- as.factor(df_labeled$label)
 library(randomForest)
 library(mlbench)
 library(caret)
 library(e1071)
 
-x <- df_allF_scaled_o2_labeled[,1:77]
-y <- df_allF_scaled_o2_labeled[,78]
+x <- df_labeled[,1:78]
+y <- df_labeled[,79]
 
 #tuning of rf
 customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
@@ -171,7 +157,7 @@ customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
 control <- trainControl(method="repeatedcv", number=5, repeats=2)
 tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
 #set.seed(123)
-custom <- train(label~., data=df_allF_scaled_o2_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
+custom <- train(label~., data=df_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
 #summary(custom)
 plot(custom)
 print(custom)
@@ -179,7 +165,7 @@ print(custom)
 applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
 
 ```{r}
-data.rf <- randomForest(formula= label ~ ., data=df_allF_scaled_o2_labeled, importance=TRUE,ntree=1000,mtry=12,
+data.rf <- randomForest(formula= label ~ ., data=df_labeled, importance=TRUE,ntree=1000,mtry=12,
                         proximity=TRUE)
 
 print(data.rf)
