@@ -8,7 +8,7 @@ loading original data
 dataset<-readRDS("C:\\Users\\shivani Jadhav\\Desktop\\DKE\\DKE SECOND SEM\\KMD Project\\190426_charite_tinnitus\\190426_charite_tinnitus.rds")
 
 
-##Cleaned data
+##Cleaned datahi
 library("tidyverse")
 
 df <- read_rds("C:\\Users\\shivani Jadhav\\Desktop\\DKE\\DKE SECOND SEM\\KMD Project\\190426_charite_tinnitus\\190426_charite_tinnitus.rds") %>%
