@@ -437,7 +437,10 @@ The features are then ordered as per their mean decrease accuracy.
 ```{r}
 set.seed(123)
 ##Tune random forest
-tuneRandomForest<-function(data){
+tuneRandomForest<-function(labels){
+# labelling the records 
+data<-df_allF%>%
+  mutate(label = labels)
 data$label<- as.factor(data$label)
 x <- data[,1:77]
 y <- data[,78]
@@ -462,20 +465,24 @@ plot(custom)
 print(custom)
 }
 ##function call
-tuneRandomForest(df_allF_hk2_labeled)
-# tuneRandomForest(df_allF_hk4_labeled)
-# tuneRandomForest(df_allF_h2_labeled)
-# tuneRandomForest(df_allF_h4_labeled)
-# tuneRandomForest(df_allF_km2_labeled)
-# tuneRandomForest(df_allF_km4_labeled)
-# tuneRandomForest(df_allF_pckm2_labeled)
-# tuneRandomForest(df_allF_pckm4_labeled)
-# tuneRandomForest(df_allF_o2_labeled)
-# tuneRandomForest(df_allF_o4_labeled)
-# tuneRandomForest(df_allF_p2_labeled)
-# tuneRandomForest(df_allF_p4_labeled)
+tuneRandomForest(hk2_labels)
+# tuneRandomForest(km2_labels)
+# tuneRandomForest(h2_labels)
+# tuneRandomForest(pckm2_labels)
+# tuneRandomForest(ok2_labels)
+# tuneRandomForest(p2_labels)
+# tuneRandomForest(hk4_labels)
+# tuneRandomForest(km4_labels)
+# tuneRandomForest(h4_labels)
+# tuneRandomForest(pckm4_labels)
+# tuneRandomForest(p4_labels)
+# tuneRandomForest(ok4_labels)
+
 ##applying random forest
-applyrf<-function(data,numClusters,ntree,mtry){
+applyrf<-function(labels,numClusters,ntree,mtry){
+# labelling the records 
+data<-df_allF%>%
+  mutate(label = labels)
 data$label<- as.factor(data$label)
 data.rf <- randomForest(formula= label ~ ., data=data, importance=TRUE,ntree=ntree,mtry=mtry,
                         proximity=TRUE)
@@ -491,19 +498,6 @@ if(numClusters==4)
   impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
 print(impfeatorder)
 }
-##function call
-applyrf(df_allF_hk2_labeled,2,1500,5)
-# applyrf(df_allF_hk4_labeled,4,,)
-# applyrf(df_allF_h2_labeled,2,,)
-# applyrf(df_allF_h4_labeled,4,,)
-# applyrf(df_allF_km2_labeled,2,,)
-# applyrf(df_allF_km4_labeled,4,,)
-# applyrf(df_allF_pckm2_labeled,2,,)
-# applyrf(df_allF_pckm4_labeled,4,,)
-# applyrf(df_allF_o2_labeled,2,,)
-# applyrf(df_allF_o4_labeled,4,,)
-# applyrf(df_allF_p2_labeled,2,,)
-# applyrf(df_allF_p42_labeled,4,,)
 ```
 
 ## Performing Radial Chart Visualisation and Decision Tree for selected Cluster numbers
@@ -522,19 +516,22 @@ kmclust2 <- kmeans(df_noCorr_scaled,num_clusters, nstart=50,iter.max = 15)
 km2_labels <- kmclust2$cluster 
 initVis(km2_labels,num_clusters)
 createDT(km2_labels,removeNA)
+applyrf(km2_labels,4,,)
 
 # Hierarchical
 set.seed(123)
 h2_labels<-cutree(hc,k=num_clusters)
 initVis(h2_labels,num_clusters)
 createDT(h2_labels,removeNA)
+applyrf(h2_labels,4,,)
 
 #PCA- KMEANS
 set.seed(123)
 pckmclust2 <- kmeans(df_PC,num_clusters, nstart=50,iter.max = 15)
 pckm2_labels <- pckmclust2$cluster
-initVis(km2_labels,num_clusters)
-createDT(km2_labels,removeNA)
+initVis(pckm2_labels,num_clusters)
+createDT(pckm2_labels,removeNA)
+applyrf(pckm2_labels,4,,)
 
 # HK means
 set.seed(123)
@@ -542,14 +539,14 @@ res.hk2 <-hkmeans(df_noCorr_scaled, num_clusters)
 hk2_labels <- res.hk2$cluster
 initVis(hk2_labels,num_clusters)
 createDT(hk2_labels,removeNA)
-
+applyrf(hk2_labels,2,1500,5)
 # Orclus
 set.seed(123)
 orclus_res_k2 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 25, k0 = 20)
 ok2_labels <- orclus_res_k2$cluster
 initVis(ok2_labels,num_clusters)
 createDT(ok2_labels,removeNA)
-
+applyrf(ok2_labels,2,1500,5)
 
 # Proclus
 set.seed(123)
@@ -564,7 +561,7 @@ for(i in k2_cluster2){
 }
 initVis(p2_labels,num_clusters)
 createDT(p2_labels,removeNA)
-
+applyrf(p2_labels,2,1500,5)
 
 ```
 
@@ -580,11 +577,14 @@ kmclust4 <- kmeans(df_noCorr_scaled,num_clusters, nstart=50,iter.max = 15)
 km4_labels <- kmclust4$cluster
 initVis(km4_labels,num_clusters)
 createDT(km4_labels,removeNA)
+applyrf(km4_labels,2,1500,5)
 
 # Hierarchical
 set.seed(123)
 h4_labels<-cutree(hc,k=num_clusters)
 initVis(h4_labels,num_clusters)
+createDT(h4_labels,removeNA)
+applyrf(h4_labels,2,1500,5)
 # HK means
 
 #PCA- KMEANS
@@ -593,6 +593,7 @@ pckmclust4 <- kmeans(df_PC,num_clusters, nstart=50,iter.max = 15)
 pckm4_labels <- pckmclust4$cluster
 initVis(km2_labels,num_clusters)
 createDT(km2_labels,removeNA)
+applyrf(km2_labels,2,1500,5)
 
 #HK Means
 set.seed(123)
@@ -600,6 +601,7 @@ res.hk4 <-hkmeans(df_noCorr_scaled, num_clusters)
 hk4_labels <- res.hk4$cluster
 initVis(hk4_labels,num_clusters)
 createDT(hk4_labels,removeNA)
+applyrf(df_allF_hk4_labeled,4,,)
 
 #Orclus
 set.seed(123)
@@ -607,6 +609,7 @@ orclus_res_k4 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 20, k0 = 31)
 ok4_labels <- orclus_res_k4$cluster
 initVis(ok4_labels,num_clusters)
 createDT(ok4_labels,removeNA)
+applyrf(ok4_labels,2,1500,5)
 
 # Proclus
 set.seed(123)
@@ -628,7 +631,7 @@ for(i in k4_cluster4){
 }
 initVis(p4_labels,num_clusters)
 createDT(p4_labels,removeNA)
-
+applyrf(p4_labels,2,1500,5)
 
 ```
 
@@ -639,24 +642,23 @@ Dunn Index: It is the ratio of minimum of this pairwise distance as the inter-cl
 Connectivity: corresponds to what extent items are placed in the same cluster as their nearest neighbors in the data space. The connectivity has a value between 0 and infinity and should be minimized.
 Compactness or cluster cohesion: Measures how close are the objects within the same cluster. A lower within-cluster variation is an indicator of a good compactness (i.e.a good clustering). Smaller values indicate a better clustering structure.
 ```{r}
-evaluate<-function(data){
-  View(data)
+evaluate<-function(labels){
+  
   result_set<-vector("list", 3)
-  result_set[1]<-dunn(clusters = data$label, Data=df_allF_scaled)
-  result_set[2]<-connectivity(distance = NULL, data$label, Data = df_allF_scaled, neighbSize = 10, method = "euclidean")
-  result_set[3]<-compactness(df_allF_scaled, data$label)
+  result_set[1]<-dunn(clusters = labels, Data=df_allF_scaled)
+  result_set[2]<-connectivity(distance = NULL, labels, Data = df_allF_scaled, neighbSize = 10, method = "euclidean")
+  result_set[3]<-compactness(df_allF_scaled, labels)
   print(result_set)
   return(result_set)
 }
 
+kmeans_result_2<-evaluate(km2_labels)
+hkmeans_result_2<-evaluate(hk2_labels)
+hc_result_2<-evaluate(hc2_labels)
+pcakmeans_result_2<-evaluate(pckm2_labels)
 
-kmeans_result_2<-evaluate(df_allF_scaled_km2_labeled)
-hkmeans_result_2<-evaluate(df_allF_scaled_hk2_labeled)
-hc_result_2<-evaluate(df_allF_scaled_hc2_labeled)
-pcakmeans_result_2<-evaluate(df_allF_scaled_pckm2_labeled)
-
-kmeans_result_4<-evaluate(df_allF_scaled_km4_labeled)
-hkmeans_result_4<-evaluate(df_allF_scaled_hk4_labeled)
-hc_result_4<-evaluate(df_allF_scaled_hc4_labeled)
-pcakmeans_result_2<-evaluate(df_allF_scaled_pckm4_labeled)
+kmeans_result_4<-evaluate(km4_labels)
+hkmeans_result_4<-evaluate(hk4_labels)
+hc_result_4<-evaluate(hc4_labels)
+pcakmeans_result_2<-evaluate(pckm4_labels)
 ```
