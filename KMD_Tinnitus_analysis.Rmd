@@ -56,7 +56,7 @@ library(rJava)
 library(subspace)
 library(orclus)
 library(diceR)
-library("clValid")
+library(clValid)
 
 ```
 
@@ -115,7 +115,7 @@ We will find out the co related columns in the data and drop them
 ```{r Correlation}
 correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
 
-cat("\ncorrelation with 90%:\n")
+#cat("\ncorrelation with 90%:\n")
 matriz_cor <- cor(df_allF,method = "spearman")
 
 for (i in 1:nrow(matriz_cor)){
