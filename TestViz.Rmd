@@ -144,7 +144,7 @@ createPlotData<-function(algo_name,clus_name,cluster_scaled,cluster)
 }
 
 
-getPlotData<-function(algo_name,clus_name,final_labels,no_of_clusters)
+getPlotData<-function(algo_name,final_labels,no_of_clusters)
 {
   # labelling the records 
   df_allF_labeled<-df_allF%>%
@@ -160,8 +160,12 @@ cluster_features_scaled<-data.frame(df_allF_scaled_labeled%>%
 cluster_features<-data.frame(df_allF_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-  clus_viz<-c()
-  plotData<-createPlotData(algo_name,clus_name,cluster_features_scaled[1,],cluster_features[1,])
+  plotData<-list()
+  for(i in seq(1:no_of_clusters))
+  {
+    clus_name<-paste("Type ",i)
+    plotData[[i]]<-createPlotData(algo_name,clus_name,cluster_features_scaled[i,],cluster_features[i,])
+  }
   return(plotData)
 }
 
@@ -169,6 +173,6 @@ set.seed(123)
 removeNA <- 0 #Flag
 num_clusters <- 2
 h2_labels<-cutree(hc,k=num_clusters)
-cluster_plot_data<-getPlotData("Hierarchical Clustering","Type 1",h2_labels,num_clusters)
-r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal")
+cluster_plot_data<-getPlotData("Hierarchical Clustering",h2_labels,num_clusters)
+r2d3(data = x, script = "cluster_chart.js",viewer ="internal")
 ```

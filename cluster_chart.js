@@ -13,17 +13,12 @@ var x = d3.scaleBand()
       .range([0, 2 * Math.PI])    // X axis goes from 0 to 2pi = all around the circle. If I stop at 1Pi, it will be around a half circle
       .align(0)                  // This does nothing
       .domain(data.map(function(d) { return d.feature; })); // The domain of the X axis is the list of features.
-      
+
+var algo= data.filter(function(d,i) { if (i===1) {return d.algorithm;} });
 var y = d3.scaleLinear()
       .range([innerRadius, outerRadius])   // Domain will be define later.
       .domain([0, 4]); // Domain of Y is from 0 to the max seen in the data
       
-var axis_scale = d3.scaleLinear()
-      .range([0, outerRadius])   // Domain will be define later.
-      .domain([-2, 2]); // Domain of Y is from 0 to the max seen in the data
-      
-var axis = d3.axisLeft(axis_scale);
-
 var tooltip = d3.select("body")
       .append("div")
       .attr("class", "toolTip")
@@ -75,5 +70,18 @@ svg=svg.append("g")
         .attr("transform", function(d) { return (x(d.feature) + x.bandwidth() / 2 + Math.PI) % (2 * Math.PI) < Math.PI ? "rotate(180)" : "rotate(0)"; })
         .style("font-size", "11px")
         .attr("alignment-baseline", "middle");
-        
-  //svg.call(axis);
+    // Add the labels
+  svg.append("text")
+      .data(algo)
+      .attr("x", 0)             
+      .attr("y", 0)
+      .attr("text-anchor", "middle")  
+      .style("font-size", "13px")
+      .text(function(d){return d.algorithm});      
+  svg.append("text")
+      .data(algo)
+      .attr("x", 0)             
+      .attr("y", 15)
+      .attr("text-anchor", "middle")  
+      .style("font-size", "13px")
+      .text(function(d){return d.cluster_name});

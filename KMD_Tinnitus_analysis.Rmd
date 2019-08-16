@@ -32,7 +32,7 @@ The project is organised as follows:
 
 ***
 Let us first load all necessary libraries for this project
-```{r Libraries, message=FALSE, warning=FALSE}
+```{r Libraries, message=FALSE, warning=FALSE, include=FALSE}
 #If any errors are thrown while loading libraries please install the packages commented below
 #install.packages("tidyverse")
 #install.packages("caret")
@@ -355,21 +355,20 @@ feature_summary<-data.frame(df_allF%>%
                               summarise_each(mean))
 ```
 For visluation of clustering results we choose a radial chart.
+To generate this radial chart we need format the data in a data structure suitable for plotting.
 The bar height is the scaled value of the features of a cluster. The tooltip gives extra information about the actual feature value and the population mean for the feature.
 ```{r Visualisation}
 #Finally creating a data frame which can be used for the visualization.
 options(scipen = 999)
-createRadialChart<-function(cluster_scaled,cluster)
+createPlotData<-function(algo_name,clus_name,cluster_scaled,cluster)
  { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
   rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
-  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-  viz <-(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser"))
-  save_d3_png(viz, file = "viz.png")
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()%>%mutate(algorithm=algo_name,cluster_name=clus_name)
   return(cluster_plot_data)
 }
 
 
-initVis<-function(final_labels,no_of_clusters)
+getPlotData<-function(algo_name,final_labels,no_of_clusters)
 {
   # labelling the records 
   df_allF_labeled<-df_allF%>%
@@ -385,14 +384,14 @@ cluster_features_scaled<-data.frame(df_allF_scaled_labeled%>%
 cluster_features<-data.frame(df_allF_labeled%>%
                                group_by(label)%>%
                                summarise_each(mean))
-
-
-  for (i in seq(1:no_of_clusters))
+  plotData<-list()
+  for(i in seq(1:no_of_clusters))
   {
-    plot_data<-createRadialChart(cluster_features_scaled[i,],cluster_features[i,])
+    clus_name<-paste("Type ",i)
+    plotData[[i]]<-createPlotData(algo_name,clus_name,cluster_features_scaled[i,],cluster_features[i,])
   }
+  return(plotData)
 }
-
 ```
 ## Decision Tree
 
@@ -523,38 +522,48 @@ num_clusters <- 2
 set.seed(123)
 kmclust2 <- kmeans(df_noCorr_scaled,num_clusters, nstart=50,iter.max = 15)
 km2_labels <- kmclust2$cluster 
-initVis(km2_labels,num_clusters)
+cluster_plot_data<-getPlotData("K-means",km2_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(km2_labels,removeNA)
-# applyrf(km2_labels,4,,)
+# applyrf(km2_labels,2,,)
 
 # Hierarchical
 set.seed(123)
 h2_labels<-cutree(hc,k=num_clusters)
-initVis(h2_labels,num_clusters)
+cluster_plot_data<-getPlotData("Hierarchical Clustering",h2_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(h2_labels,removeNA)
-# applyrf(h2_labels,4,,)
+# applyrf(h2_labels,2,,)
 
 #PCA- KMEANS
 set.seed(123)
 pckmclust2 <- kmeans(df_PC,num_clusters, nstart=50,iter.max = 15)
 pckm2_labels <- pckmclust2$cluster
-initVis(pckm2_labels,num_clusters)
+cluster_plot_data<-getPlotData("PCA K-means",pckm2_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(pckm2_labels,removeNA)
-# applyrf(pckm2_labels,4,,)
+# applyrf(pckm2_labels,2,,)
 
 # HK means
 set.seed(123)
 res.hk2 <-hkmeans(df_noCorr_scaled, num_clusters)
 hk2_labels <- res.hk2$cluster
-initVis(hk2_labels,num_clusters)
+cluster_plot_data<-getPlotData("HK-means",hk2_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(hk2_labels,removeNA)
-applyrf(hk2_labels,2,1500,5)
+#applyrf(hk2_labels,2,1500,5)
 
 # Orclus
 set.seed(123)
 orclus_res_k2 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 25, k0 = 20)
 ok2_labels <- orclus_res_k2$cluster
-initVis(ok2_labels,num_clusters)
+cluster_plot_data<-getPlotData("Orclus",ok2_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(ok2_labels,removeNA)
 # applyrf(ok2_labels,2,1500,5)
 
@@ -569,9 +578,11 @@ for(i in k2_cluster2){
 
   p2_labels[i]<- 2
 }
-initVis(p2_labels,num_clusters)
+cluster_plot_data<-getPlotData("Proclus",p2_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(p2_labels,removeNA)
-# applyrf(p2_labels,2,,)
+# applyrf(p2_labels,2,,) 
 
 ```
 
@@ -585,14 +596,22 @@ num_clusters<- 4
 set.seed(123)
 kmclust4 <- kmeans(df_noCorr_scaled,num_clusters, nstart=50,iter.max = 15)
 km4_labels <- kmclust4$cluster
-initVis(km4_labels,num_clusters)
+cluster_plot_data<-getPlotData("K-means",km4_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(km4_labels,removeNA)
 # applyrf(km4_labels,2,1500,5)
 
 # Hierarchical
 set.seed(123)
 h4_labels<-cutree(hc,k=num_clusters)
-initVis(h4_labels,num_clusters)
+cluster_plot_data<-getPlotData("Hierarchical Clustering",h4_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(h4_labels,removeNA)
 # applyrf(h4_labels,2,1500,5)
 # HK means
@@ -601,7 +620,11 @@ createDT(h4_labels,removeNA)
 set.seed(123)
 pckmclust4 <- kmeans(df_PC,num_clusters, nstart=50,iter.max = 15)
 pckm4_labels <- pckmclust4$cluster
-initVis(pckm4_labels,num_clusters)
+cluster_plot_data<-getPlotData("PCA K-means",pckm4_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(pckm4_labels,removeNA)
 # applyrf(pckm2_labels,2,1500,5)
 
@@ -609,7 +632,11 @@ createDT(pckm4_labels,removeNA)
 set.seed(123)
 res.hk4 <-hkmeans(df_noCorr_scaled, num_clusters)
 hk4_labels <- res.hk4$cluster
-initVis(hk4_labels,num_clusters)
+cluster_plot_data<-getPlotData("Hierarchical K-means",hk4_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(hk4_labels,removeNA)
 # applyrf(df_allF_hk4_labeled,4,,)
 
@@ -617,7 +644,11 @@ createDT(hk4_labels,removeNA)
 set.seed(123)
 orclus_res_k4 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 20, k0 = 31)
 ok4_labels <- orclus_res_k4$cluster
-initVis(ok4_labels,num_clusters)
+cluster_plot_data<-getPlotData("Orclus",ok4_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(ok4_labels,removeNA)
 # applyrf(ok4_labels,2,1500,5)
 
@@ -639,7 +670,11 @@ for(i in k4_cluster4){
 
   p4_labels[i]<- 4
 }
-initVis(p4_labels,num_clusters)
+cluster_plot_data<-getPlotData("Proclus",p4_labels,num_clusters)
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(p4_labels,removeNA)
 # applyrf(p4_labels,2,1500,5)
 
