@@ -363,7 +363,8 @@ createRadialChart<-function(cluster_scaled,cluster)
  { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
   rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-  print(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal"))
+  viz <-(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="browser"))
+  save_d3_png(viz, file = "viz.png")
   return(cluster_plot_data)
 }
 
@@ -669,5 +670,17 @@ pcakmeans_result_2<-evaluate(pckm2_labels)
 kmeans_result_4<-evaluate(km4_labels)
 hkmeans_result_4<-evaluate(hk4_labels)
 hc_result_4<-evaluate(h4_labels)
-pcakmeans_result_2<-evaluate(pckm4_labels)
+pcakmeans_result_4<-evaluate(pckm4_labels)
+
+MatrixA <- matrix(, nrow = 1, ncol = 3)
+MatrixA<-rbind(MatrixA,kmeans_result_2)
+MatrixA<-rbind(MatrixA,hkmeans_result_2)
+MatrixA<-rbind(MatrixA,hc_result_2)
+MatrixA<-rbind(MatrixA,pcakmeans_result_2)
+colnames(MatrixA)<-c("Dunn","Connectivity","Compactness")
+MatrixA<-rbind(MatrixA,kmeans_result_4)
+MatrixA<-rbind(MatrixA,hkmeans_result_4)
+MatrixA<-rbind(MatrixA,hc_result_4)
+MatrixA<-rbind(MatrixA,pcakmeans_result_4)
+MatrixA<-MatrixA[-1,]
 ```
