@@ -520,7 +520,7 @@ cluster_plot_data<-getPlotData("K-means",km2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(km2_labels,removeNA)
-# applyrf(km2_labels,2,,)
+applyrf(km2_labels,2,1000,5)
 
 # Hierarchical
 set.seed(123)
@@ -529,7 +529,7 @@ cluster_plot_data<-getPlotData("Hierarchical Clustering",h2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(h2_labels,removeNA)
-# applyrf(h2_labels,2,,)
+applyrf(h2_labels,2,1500,6)
 
 #PCA- KMEANS
 set.seed(123)
@@ -539,7 +539,7 @@ cluster_plot_data<-getPlotData("PCA K-means",pckm2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(pckm2_labels,removeNA)
-# applyrf(pckm2_labels,2,,)
+applyrf(pckm2_labels,2,1000,5)
 
 # HK means
 set.seed(123)
@@ -549,7 +549,7 @@ cluster_plot_data<-getPlotData("HK-means",hk2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(hk2_labels,removeNA)
-#applyrf(hk2_labels,2,1500,5)
+applyrf(hk2_labels,2,1500,5)
 
 # Orclus
 set.seed(123)
@@ -559,7 +559,7 @@ cluster_plot_data<-getPlotData("Orclus",ok2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(ok2_labels,removeNA)
-# applyrf(ok2_labels,2,1500,5)
+applyrf(ok2_labels,2,1500,10)
 
 # Proclus
 set.seed(123)
@@ -576,7 +576,7 @@ cluster_plot_data<-getPlotData("Proclus",p2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(p2_labels,removeNA)
-# applyrf(p2_labels,2,,) 
+applyrf(p2_labels,2,1000,5) 
 
 ```
 
@@ -596,7 +596,7 @@ r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="interna
 r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(km4_labels,removeNA)
-# applyrf(km4_labels,2,1500,5)
+applyrf(km4_labels,2,1000,5)
 
 # Hierarchical
 set.seed(123)
@@ -607,8 +607,7 @@ r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="interna
 r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(h4_labels,removeNA)
-# applyrf(h4_labels,2,1500,5)
-# HK means
+applyrf(h4_labels,2,1500,6)
 
 #PCA- KMEANS
 set.seed(123)
@@ -620,7 +619,7 @@ r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="interna
 r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(pckm4_labels,removeNA)
-# applyrf(pckm2_labels,2,1500,5)
+applyrf(pckm2_labels,2,1000,5)
 
 #HK Means
 set.seed(123)
@@ -632,7 +631,7 @@ r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="interna
 r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(hk4_labels,removeNA)
-# applyrf(df_allF_hk4_labeled,4,,)
+applyrf(hk4_labels,4,1500,5)
 
 #Orclus
 set.seed(123)
@@ -644,7 +643,7 @@ r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="interna
 r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(ok4_labels,removeNA)
-# applyrf(ok4_labels,2,1500,5)
+applyrf(ok4_labels,2,1500,12)
 
 # Proclus
 set.seed(123)
@@ -670,7 +669,7 @@ r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="interna
 r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(p4_labels,removeNA)
-# applyrf(p4_labels,2,1500,5)
+applyrf(p4_labels,2,1000,12)
 
 ```
 ## Evaluation :
