@@ -1,0 +1,80 @@
+---
+title: "KMD"
+author: "Priyanka"
+date: "08/18/2019"
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+First we would load all the necessary libraries
+```{r}
+#If any errors are thrown while loading libraries please install the packages commented below
+#install.packages("tidyverse")
+#install.packages("caret")
+#install.packages("rpart.plot")
+#install.packages("e1071")
+library(tidyverse)  # data manipulation
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
+library(r2d3)
+```
+
+Hierarchical clustering can be done in two ways :
+1) Top Down : Start with the entire data as a cluster and break them down until each point is a cluster in itself.
+2) Bottom up : Start from individual points as clusters and merge them based on similarities until one cluster if formed.
+
+There are different ways to calculate the distance/ similarity between individual points and in between the clusters which can be a very important factor in deciding the final cluster results.
+
+So we first create a list of these methods and then create clusters for each combination.
+```{r}
+# methods to assess inter cluster similarity
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+#distance measures
+dist_methods <- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+names(dist_methods)<- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+
+```
+
+Now we can calculate the clusters. The ac value of each cluster gives the quality/ tightness of each cluster. The closer the value is to 1 the better are the results.
+
+**the agglomerative coefficient, measuring the clustering structure of the dataset.
+
+For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes.**
+```{r}
+# function to compute coefficient
+final_dist_m<-list()
+final_m<-list()
+for(dist_m in dist_methods)
+{
+  dist_matrix<-dist(df_noCorr_scaled, method = dist_m)
+    hc <-diana(dist_matrix)
+    dc<-hc$dc
+    title<-sprintf("Distance: %s, dc value: %f",dist_m,dc)
+    pltree(hc, cex = 0.6, hang = -1,main = title)
+    if(!is.nan(dc) && dc>0.95)
+    {
+      print(title)
+      final_dist_m<-c(final_dist_m,dist_m)
+      final_m<-c(final_m,x)
+    }
+}
+```
+
+Now we can choose the desired combination, for example: Euclidean and Ward method and then we can cut the tree to get the final clusters.
+```{r}
+
+dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
+hc <-agnes(dist_matrix, method = "ward")
+h2_labels<-cutree(hc,k=2)
+table(h2_labels)
+h4_labels<-cutree(hc,k=4)
+table(h4_labels)
+```
