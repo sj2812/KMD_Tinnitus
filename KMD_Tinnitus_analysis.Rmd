@@ -32,7 +32,7 @@ The project is organised as follows:
 
 ***
 Let us first load all necessary libraries for this project
-```{r Libraries, message=FALSE, warning=FALSE, include=FALSE}
+```{r Libraries, message=FALSE, warning=FALSE}
 #If any errors are thrown while loading libraries please install the packages commented below
 #install.packages("tidyverse")
 #install.packages("caret")
@@ -217,7 +217,7 @@ m <- c( "average", "single", "complete", "ward")
 names(m) <- c( "average", "single", "complete", "ward")
 
 #distance measures
-dist_methods <- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+dist_methods <- c("euclidean","manhattan","maximum", "canberra","minkowski")
 names(dist_methods)<- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
 
 # function to compute coefficient
@@ -255,7 +255,7 @@ Prinicipal Component Analysis is used for High Dimensional Dataset to convert th
 ```{r PCA}
 #Create Prinicipal Components
 km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
-summary(km.pc)
+#summary(km.pc)
 
 #Maxmimum PC for Scree and Score Plots for visualization
 maxPC <- 50
@@ -289,18 +289,9 @@ df_PC <- km.pc$x[,1:PC_num]
 ```
 
 ## ORCLUS 
-To perform subspace clustering where the clusters are concentrated in different cluster
-specific subspaces of the data.
+Many datasets contains inter-attribute correlations. Orclus is used to tackle this by extending Proclus to include search for non-axis parallel subspaces. Orclus is based on K-means and has three phases: Assign clusters, Find Vectors and Merge. Initially the data points are assigned to the nearest cluster centers with minimal euclidean distance in corresponding subspaces. In the next phase, for each cluster, subspace dimensionality $l_c$ are determined which is closer to the user input l. From iteration to iteration $l_c$ values decreases gradually to match $l$. During the Merge phase closest current pairs of clusters are merged to get final k clusters from initial k0 clusters. 
 
-Orclus is done with respect to 3 steps:
-1) Assign : The database is partitioned into k0 current clusters by assigning each point to its closest                 seed. In the process of partitioning, the distance of a database point to seed is measured in               the subspace. At the end of this procedure each seed is replaced by the centroid of the cluster             which was just created.
-2) FindVectors : This is to find the subspace of dimensionality l for each current cluster.
-3) Merge: During a given iteration, the Merge phase reduces the number of clusters from k0 to k.
-
-The quality of the clustering can be measured by the sparsity coefficient and within.proj parametes of cluster results. The within projection parameter give the sse of each cluster. According to these values we have to select the cluster in lower dimenstion.
-
-
-```{r Orclus}
+```{r Orclus,echo=FALSE}
 
 #Represents the tuning of clusters according to quality measures
 
@@ -320,10 +311,9 @@ The quality of the clustering can be measured by the sparsity coefficient and wi
 k4_tuning_dataset <- read_csv("inital_tune_l_sparsity.csv")
 
 ```
-##PROCLUS
+## PROCLUS
 
-Projected subspace Clustering is a method with uses Kmediods to cluster the high dimensional data. It uses greedy method to find a set of medioods that represents the cluster. These mediods are iteratively selected until we get perfect set of mediods with cardinality d0. The dimensions of each cluster can differ, which means it only selects the dimension the represents that particular cluster.In iterative phase, the quality of clusters are also refined before the final results. Proclus is robust to outlier.
-
+Proclus is based on K-mediods and uses three phase approach: initialization, iteration and cluster refinement. In the initialization step it selects random set of mediods which are farthest from each other. It uses Sampling to get data set and set of K mediods. These mediods are then in next phase iteratively selected to improve the clustering.  This is done by choosing average distance between points and the nearest mediod as the Cluster Quality measure. In refinement phase, based on the cluster formed new dimensions for each mediods are computed. Proclus can produce cluster with different number of selected dimensions as it tries to maintain the average dimensions per cluster given by the user.
 
 ```{r Proclus}
 
@@ -354,7 +344,7 @@ feature_summary_scaled<-data.frame(df_allF_scaled%>%
 feature_summary<-data.frame(df_allF%>%
                               summarise_each(mean))
 ```
-For visluation of clustering results we choose a radial chart.
+For visualisation of clustering results we choose a radial chart.
 To generate this radial chart we need format the data in a data structure suitable for plotting.
 The bar height is the scaled value of the features of a cluster. The tooltip gives extra information about the actual feature value and the population mean for the feature.
 ```{r Visualisation}
@@ -430,9 +420,9 @@ createDT<-function(final_labels,remove_na)
 
 ## Random Forest
 
-supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
+Supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code does the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
 We then apply random forest with the best paramters. 
-##table with optimal values after parameter tuning.
+##{todo}table with optimal values after parameter tuning.
 The features are then ordered as per their mean decrease accuracy.
 ```{r RF}
 set.seed(123)
@@ -679,14 +669,11 @@ createDT(p4_labels,removeNA)
 # applyrf(p4_labels,2,1500,5)
 
 ```
-
-
-
-Evaluation
-Dunn Index: It is the ratio of minimum of this pairwise distance as the inter-cluster separation (min.separation) to the maximal intra-cluster distance (i.e maximum diameter) as the intra-cluster compactness.If the data set contains compact and well-separated clusters, the diameter of the clusters is expected to be small and the distance between the clusters is expected to be large. Thus, Dunn index should be maximized.
-Connectivity: corresponds to what extent items are placed in the same cluster as their nearest neighbors in the data space. The connectivity has a value between 0 and infinity and should be minimized.
-Compactness or cluster cohesion: Measures how close are the objects within the same cluster. A lower within-cluster variation is an indicator of a good compactness (i.e.a good clustering). Smaller values indicate a better clustering structure.
-```{r Evaluation}
+## Evaluation :
+* Dunn Index: It is the ratio of minimum of this pairwise distance as the inter-cluster separation (min.separation) to the maximal intra-cluster distance (i.e maximum diameter) as the intra-cluster compactness.If the data set contains compact and well-separated clusters, the diameter of the clusters is expected to be small and the distance between the clusters is expected to be large. Thus, Dunn index should be maximized.
+* Connectivity: corresponds to what extent items are placed in the same cluster as their nearest neighbors in the data space. The connectivity has a value between 0 and infinity and should be minimized.
+* Compactness or cluster cohesion: Measures how close are the objects within the same cluster. A lower within-cluster variation is an indicator of a good compactness (i.e.a good clustering). Smaller values indicate a better clustering structure.
+```{r Evaluation, echo=FALSE}
 evaluate<-function(labels){
   
   result_set<-vector("list", 3)
@@ -706,16 +693,21 @@ kmeans_result_4<-evaluate(km4_labels)
 hkmeans_result_4<-evaluate(hk4_labels)
 hc_result_4<-evaluate(h4_labels)
 pcakmeans_result_4<-evaluate(pckm4_labels)
+```
 
-MatrixA <- matrix(, nrow = 1, ncol = 3)
-MatrixA<-rbind(MatrixA,kmeans_result_2)
-MatrixA<-rbind(MatrixA,hkmeans_result_2)
-MatrixA<-rbind(MatrixA,hc_result_2)
-MatrixA<-rbind(MatrixA,pcakmeans_result_2)
-colnames(MatrixA)<-c("Dunn","Connectivity","Compactness")
-MatrixA<-rbind(MatrixA,kmeans_result_4)
-MatrixA<-rbind(MatrixA,hkmeans_result_4)
-MatrixA<-rbind(MatrixA,hc_result_4)
-MatrixA<-rbind(MatrixA,pcakmeans_result_4)
-MatrixA<-MatrixA[-1,]
+
+```{r Evaluation}
+eval_table <- matrix(, nrow = 1, ncol = 3)
+eval_table<-rbind(eval_table,kmeans_result_2)
+eval_table<-rbind(eval_table,hkmeans_result_2)
+eval_table<-rbind(eval_table,hc_result_2)
+eval_table<-rbind(eval_table,pcakmeans_result_2)
+colnames(eval_table)<-c("Dunn","Connectivity","Compactness")
+eval_table<-rbind(eval_table,kmeans_result_4)
+eval_table<-rbind(eval_table,hkmeans_result_4)
+eval_table<-rbind(eval_table,hc_result_4)
+eval_table<-rbind(eval_table,pcakmeans_result_4)
+eval_table<-eval_table[-1,]
+
+print(eval_table)
 ```
