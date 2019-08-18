@@ -218,7 +218,7 @@ names(m) <- c( "average", "single", "complete", "ward")
 
 #distance measures
 dist_methods <- c("euclidean","manhattan","maximum", "canberra","minkowski")
-names(dist_methods)<- c("euclidean","manhattan","maximum", "canberra","binary","minkowski")
+names(dist_methods)<- c("euclidean","manhattan","maximum", "canberra","minkowski")
 
 # function to compute coefficient
 final_dist_m<-list()
@@ -295,20 +295,24 @@ Many datasets contains inter-attribute correlations. Orclus is used to tackle th
 
 #Represents the tuning of clusters according to quality measures
 
-# for (k in seq(10,30,by = 5)) {
-# 
-#   for (i in seq(20,60,by = 5)) {
-# 
-#     orclus_res_k2 <- orclus(x = subspace_data,k=2,l = i, k0 = k)
-#     tune_lf_sparsity[j,1] <- k
-#     tune_lf_sparsity[j,2] <- i
-#     tune_lf_sparsity[j,3] <- orclus_res_k2$sparsity.coefficient
-#     tune_lf_sparsity[j,4] <- sum(orclus_res_k2$within.projens)
-#     j <- j+1
-#   }
-# }
+ tune_orclus <- function(data,num_of_clusters)
+{
+  for (k in seq(10,30,by = 5)) {
+  
+    for (i in seq(20,60,by = 5)) {
+  
+      orclus_res_k2 <- orclus(x = data,k=2,l = i, k0 = k)
+      tune_lf_sparsity[j,1] <- k
+      tune_lf_sparsity[j,2] <- i
+      tune_lf_sparsity[j,3] <- orclus_res_k2$sparsity.coefficient
+      tune_lf_sparsity[j,4] <- sum(orclus_res_k2$within.projens)
+      j <- j+1
+    }
+  }
+}
 
-k4_tuning_dataset <- read_csv("inital_tune_l_sparsity.csv")
+#tune_orclus(df_noCorr_scaled,2)
+#tune_orclus(df_noCorr_scaled,4)
 
 ```
 ## PROCLUS
