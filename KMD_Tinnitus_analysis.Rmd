@@ -1,7 +1,7 @@
 ---
 title: "pre-final"
 author: "Abhilash, Kritika, Priyanka, Shivani"
-date: "11 August 2019"
+date: "19 August 2019"
 output: html_document
 ---
 ```{r setup, include=FALSE}
@@ -210,7 +210,7 @@ Then we can calculate the clusters. The ac value of each cluster gives the quali
 **the agglomerative coefficient, measuring the clustering structure of the dataset.
 
 For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes.**
-```{r Hierarchical, echo=FALSE}
+```{r Hierarchical Tune, echo=FALSE}
 set.seed(123)
 # methods to assess inter cluster similarity
 m <- c( "average", "single", "complete", "ward")
@@ -703,8 +703,9 @@ hc_result_4<-evaluate(h4_labels)
 pcakmeans_result_4<-evaluate(pckm4_labels)
 ```
 
+Following Table is created to store the evaluation measure values for the used Clustering approaches. 
 
-```{r Evaluation}
+```{r Evaluation Table}
 eval_table <- matrix(, nrow = 1, ncol = 3)
 eval_table<-rbind(eval_table,kmeans_result_2)
 eval_table<-rbind(eval_table,hkmeans_result_2)
