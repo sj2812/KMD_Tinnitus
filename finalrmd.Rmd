@@ -138,10 +138,12 @@ df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
 ```
+
 ```{r}
 createDT<-function(final_labels,remove_na)
 { 
   set.seed(123)
+  
   
   # labelling the records 
   df_allF_labeled<-df_allF%>%
@@ -164,16 +166,69 @@ createDT<-function(final_labels,remove_na)
   prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 }
 ```
+
+
+
+```{r Visualization}
+
+feature_summary_scaled<-data.frame(df_allF_scaled%>%
+                               summarise_each(mean))
+feature_summary<-data.frame(df_allF%>%
+                              summarise_each(mean))
+
+#Finally creating a data frame which can be used for the visualization.
+options(scipen = 999)
+createPlotData <- function(algo_name,clus_name,cluster_scaled,cluster)
+ { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
+  rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()%>%mutate(algorithm=algo_name,cluster_name=clus_name)
+  return(cluster_plot_data)
+}
+
+
+getPlotData <- function(algo_name,final_labels,no_of_clusters)
+{
+  # labelling the records 
+  df_allF_labeled<-df_allF%>%
+  mutate(label = final_labels)
+df_allF_scaled_labeled<-df_allF_scaled%>%
+  mutate(label = final_labels)
+
+# creating cluster feature vectors from obtained labels
+
+cluster_features_scaled<-data.frame(df_allF_scaled_labeled%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+cluster_features<-data.frame(df_allF_labeled%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+  plotData<-list()
+  for(i in seq(1:no_of_clusters))
+  {
+    clus_name<-paste("Type ",i)
+    plotData[[i]]<-createPlotData(algo_name,clus_name,cluster_features_scaled[i,],cluster_features[i,])
+  }
+  return(plotData)
+}
+
+```
+
+DT
+
 ```{r}
 getkmeans<-function(n,removeNA){
   kmclust <- kmeans(df_noCorr_scaled, n)
   km_labels <- kmclust$cluster 
   createDT(km_labels,removeNA)
+  
+
+  
 }
 gethkmeans<-function(n,removeNA){
   hkmclust <- hkmeans(df_noCorr_scaled, n)
   hkm_labels <- hkmclust$cluster 
   createDT(hkm_labels,removeNA)
+  
 }
 gethierarchical<-function(n,removeNA){
   dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
@@ -181,20 +236,16 @@ gethierarchical<-function(n,removeNA){
   h_labels<-cutree(hc,k=n)
   createDT(h_labels,removeNA)
 }
-getorclus<-function(n,removeNA){
-  orclus_res_k2 <- orclus(x = df_noCorr_scaled,k=n,l = 25, k0 = 20)
-ok2_labels <- orclus_res_k2$cluster
-  createDT(ok2_labels,removeNA)
-}
+
 getproclus<-function(n,removeNA){
   ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
   labels<-c()
 
-for ( i in 1:n) {
-  for (j in ProClus.clusters.k[[i]]$objects) {
-      labels[j] <- i
+  for ( i in 1:n) {
+    for (j in ProClus.clusters.k[[i]]$objects) {
+        labels[j] <- i
+        }
   }
-}
   createDT(labels,1)
 }
 getpcakmeans<-function(n,removeNA){
@@ -206,30 +257,114 @@ getpcakmeans<-function(n,removeNA){
   createDT(km_labels,removeNA)
 }
 
+getorclus<-function(n,removeNA){
+  set.seed(123)
+  orclus_res_k <- orclus(df_noCorr_scaled,k = n,l = 25, k0 = 20)
+  ok_labels <- orclus_res_k$cluster
+  createDT(ok_labels,removeNA)
 
+  }
+```
+
+Radial Chart
+
+```{r}
 getkmeansradial<-function(n,removeNA){
   kmclust <- kmeans(df_noCorr_scaled, n)
   km_labels <- kmclust$cluster 
   cluster_plot_data<-getPlotData("K-means",km_labels,n)
   
+  if(n == 2) {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  }
+  else {
+    cluster_plot_data<-getPlotData("K-means",km_labels,n)
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+  }
 }
+
 gethkmeansradial<-function(n,removeNA){
   hkmclust <- hkmeans(df_noCorr_scaled, n)
-  hkm_labels <- hkmclust$cluster 
-  createDT(hkm_labels,removeNA)
+  hkm_labels <- hkmclust$cluster
+  cluster_plot_data<-getPlotData("HK-means",hkm_labels,n)
+    if(n == 2) {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  }
+  else {
+    cluster_plot_data<-getPlotData("K-means",km_labels,n)
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+  }
+  
+  
 }
 gethierarchicalradial<-function(n,removeNA){
   dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
   hc <-agnes(dist_matrix, method = "ward")
   h_labels<-cutree(hc,k=n)
-  createDT(h_labels,removeNA)
+  
+  cluster_plot_data<-getPlotData("Heirarachichal",h_labels,n)
+    if(n == 2) {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  }
+  else {
+    cluster_plot_data<-getPlotData("K-means",km_labels,n)
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+  }
+ 
 }
 getorclusradial<-function(n,removeNA){
-  orclus_res_k <- orclus(x = df_noCorr_scaled,k=n,l = 25, k0 = 20)
-ok_labels <- orclus_res_k$cluster
-  createDT(ok_labels,removeNA)
+  
+  orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)
+  ok_labels <- orclus_res_k$cluster
+  
+  cluster_plot_data<-getPlotData("Orclus",ok_labels,n)
+    if(n == 2) {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  }
+  else {
+    cluster_plot_data<-getPlotData("K-means",km_labels,n)
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+  }
+  
 }
 getproclusradial<-function(n,removeNA){
+   ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
+   p_labels<-c()
+
+  for ( i in 1:n) {
+    for (j in ProClus.clusters.k[[i]]$objects) {
+        p_labels[j] <- i
+        }
+  }
+   
+  cluster_plot_data <- getPlotData("Proclus",p_labels,n)
+    if(n == 2) {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  }
+  else {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+  }
+  
   
 }
 getpcakmeansradial<-function(n,removeNA){
@@ -238,7 +373,18 @@ getpcakmeansradial<-function(n,removeNA){
   df_PC <- km.pc$x[,1:PC_num]
   kmclust <- kmeans(df_PC, n)
   km_labels <- kmclust$cluster 
-  createDT(km_labels,removeNA)
+ 
+  cluster_plot_data<-getPlotData("PC Kmeans",km_labels,n)
+  if(n == 2) {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  }
+  else {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+  } 
 }
 ```
 
@@ -264,7 +410,7 @@ dt<-function(approach,numClust){
     getpcakmeans(numClust,0)
   }
 }
-radialchart<-function(approach,numClust){
+radialchart <- function(approach,numClust){
   if(approach=="kmeans"){
     getkmeansradial(numClust,0)
   }
@@ -286,6 +432,7 @@ radialchart<-function(approach,numClust){
   
 }
 ```
+
 ```{r}
 library(shiny)
 
@@ -308,11 +455,11 @@ server<-function(input,output){
   # output$out<-(condition)
   
   viewsel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
-                    else paste("The decision tree for", input$Algorithm,"with number of cluster",input$numClust)
+              else paste("The decision tree for", input$Algorithm,"with number of cluster",input$numClust)
                 
   )
   sel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
-                    else paste("The radial chart for", input$Algorithm,"with number of clusters",input$numClust)
+              else paste("The radial chart for", input$Algorithm,"with number of clusters",input$numClust)
                     
   )
   DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
