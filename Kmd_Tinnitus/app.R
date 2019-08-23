@@ -14,9 +14,11 @@ ui <- fluidPage(
     pageWithSidebar(
         headerPanel('Tinnitus Analysis'),
         sidebarPanel(
-            selectInput('clust', 'CLustering Algorithm',choices = list("kmeans" = 1,"Heirarchichal" = 2,"Hkmeans" = 3),selected = 1),
-            selectInput('visual','Type of visualization',choices = list("Cluster" = 1,"Decision Tree" = 2,"Radial Chart" = 3)),
-            selectInput('clusters', 'Cluster count',choices = list("2" = 2,"4" = 4),selected = 1),
+            selectInput('Algorithm', 'CLustering Algorithm',
+                        choices = list("Select an algorithm" = 0,"kmeans" = 1,"Heirarchichal" = 2,"Hkmeans" = 3,"PC kmeans" = 4,"Proclus" = 5,"Orclus" = 6),selected = 0),
+            selectInput('visual','Type of visualization',choices = list("Select" = 0,"Decision Tree" = 1,"Radial Chart" = 2),selected = 0),
+            numericInput('clusters', 'Cluster count',3,min = 2,max = 9),
+            actionButton("update", "Show"),
             hr(),
             fluidRow(column(3, verbatimTextOutput("value")))
         ),
@@ -29,7 +31,27 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    output$value <- renderPrint({ input$select })
+  
+  condition <- reactive(input$visual)
+  alg <- reactive(input$Algorithm)
+  
+  selectedData <- reactive({
+    clust(input$clusters)
+  })
+  
+  view <- reactive(if( condition() == 1 ) 
+                    DT(selectedData)
+                  else 
+                    radial(selectedData)
+                    )
+  
+
+  
+  clust <- reactive(
+    if(alg() == "kmeans")
+      
+    )
+  
   
 }
 

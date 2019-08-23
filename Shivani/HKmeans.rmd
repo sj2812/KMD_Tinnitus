@@ -230,6 +230,7 @@ applying random forest with the best paramters. for hkmeans number of trees 1000
 # data<-data[-c(which(is.na(data$label))),]
 
 ```
+
 ```{r}
 dt<-function(){
 library(caret)
@@ -250,6 +251,7 @@ tree<- prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 
 }
 ```
+
 ```{r}
 library(shiny)
 
