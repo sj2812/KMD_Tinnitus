@@ -174,5 +174,5 @@ removeNA <- 0 #Flag
 num_clusters <- 2
 h2_labels<-cutree(hc,k=num_clusters)
 cluster_plot_data<-getPlotData("Hierarchical Clustering",h2_labels,num_clusters)
-r2d3(data = x, script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 ```
