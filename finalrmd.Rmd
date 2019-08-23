@@ -182,12 +182,20 @@ gethierarchical<-function(n,removeNA){
   createDT(h_labels,removeNA)
 }
 getorclus<-function(n,removeNA){
-  orclus_res_k <- orclus(x = df_noCorr_scaled,k=n,l = 25, k0 = 20)
-ok_labels <- orclus_res_k$cluster
-  createDT(ok_labels,removeNA)
+  orclus_res_k2 <- orclus(x = df_noCorr_scaled,k=n,l = 25, k0 = 20)
+ok2_labels <- orclus_res_k2$cluster
+  createDT(ok2_labels,removeNA)
 }
 getproclus<-function(n,removeNA){
-  
+  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
+  labels<-c()
+
+for ( i in 1:n) {
+  for (j in ProClus.clusters.k[[i]]$objects) {
+      labels[j] <- i
+  }
+}
+  createDT(labels,1)
 }
 getpcakmeans<-function(n,removeNA){
   km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
