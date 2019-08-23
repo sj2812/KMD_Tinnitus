@@ -1,7 +1,15 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+  word_document: default
+---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(r2d3)
 ```
+
 
 loading original data
 ```{r}
@@ -139,18 +147,27 @@ feature_summary<-data.frame(df_allF%>%
 ```
 Finally creating a data frame which can be used for the visualization.
 The difference between "feature_summary" and "cluster_features" will tell us how different the feature of a cluster is from the mean of the population. Which is finally plotted in the graph.
-```{r echo=TRUE}
+```{r}
+
 options(scipen = 999)
+
+
+# Main code
+
 f<-function(cluster_scaled,cluster)
  { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
   rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
   cluster_plot_data<-t(cluster_plot_data)%>%data.frame()
-  print(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer ="internal"))
+  viz<-(r2d3(data = cluster_plot_data, script = "cluster_chart.js",viewer = "browser"))
+  save_d3_html(viz, file = "viz.html")
+  library(rbokeh)
+  widget2png('viz.html', "file.png", timeout = 500)
   return(cluster_plot_data)
 }
 for (i in seq(1:2))
-{
+{ 
   plot_data<-f(cluster_features_scaled[i,],cluster_features[i,])
+  
 }
 
 
@@ -159,61 +176,63 @@ for (i in seq(1:2))
 supervised phase to obtain the important features using random forest. This chunk does the tuning of the parameters for random forest. There is no inbuilt function to obtain the optimal number of trees i.e mtree could not be tuned using available packages so this code imbibes the parameter tuning for mtree as well and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
 ```{r}
 #bb
-df_allF_hk2_labeled$label<- as.factor(df_allF_hk2_labeled$label)
+# df_allF_hk2_labeled$label<- as.factor(df_allF_hk2_labeled$label)
 library(randomForest)
 library(mlbench)
 library(caret)
 library(e1071)
-
-x <- df_allF_hk2_labeled[,1:77]
-y <- df_allF_hk2_labeled[,78]
-
-#tuning of rf
-customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
-customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
-customRF$grid <- function(x, y, len = NULL, search = "grid") {}
-customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-  randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
-}
-customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
-  predict(modelFit, newdata)
-customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
-  predict(modelFit, newdata, type = "prob")
-# train model
-control <- trainControl(method="repeatedcv", number=5, repeats=2)
-tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
-set.seed(123)
-custom <- train(label~., data=df_allF_hk2_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
-#summary(custom)
-plot(custom)
-print(custom)
+# 
+# x <- df_allF_hk2_labeled[,1:77]
+# y <- df_allF_hk2_labeled[,78]
+# 
+# #tuning of rf
+# customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+# customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
+# customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+# customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
+#   randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
+# }
+# customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+#   predict(modelFit, newdata)
+# customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+#   predict(modelFit, newdata, type = "prob")
+# # train model
+# control <- trainControl(method="repeatedcv", number=5, repeats=2)
+# tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
+# set.seed(123)
+# custom <- train(label~., data=df_allF_hk2_labeled, method=customRF,  tuneGrid=tunegrid, trControl=control)
+# #summary(custom)
+# plot(custom)
+# print(custom)
 ```
 applying random forest with the best paramters. for hkmeans number of trees 1000 and mtry 5 is the optimal solution. The features are ordered as per their mean decrease accuracy.
 ```{r}
-data.rf <- randomForest(formula= label ~ ., data=df_allF_hk2_labeled, importance=TRUE,ntree=1500,mtry=5,
-                        proximity=TRUE)
-
-print(data.rf)
-plot(data.rf)
-varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
-
-impfeat<-importance(data.rf)
-
-impfeatdf<-data.frame(impfeat)
-impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
-
-getorderedfeatures<-function(numberofclusters){
-  if(numberofclusters==2)
-    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
-  if(numberofclusters==4)
-    impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
-  print(impfeatorder)
-}
-getorderedfeatures(2)
-
+# data.rf <- randomForest(formula= label ~ ., data=df_allF_hk2_labeled, importance=TRUE,ntree=1500,mtry=5,
+#                         proximity=TRUE)
+# 
+# print(data.rf)
+# plot(data.rf)
+# varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+# 
+# impfeat<-importance(data.rf)
+# 
+# impfeatdf<-data.frame(impfeat)
+# impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
+# 
+# getorderedfeatures<-function(numberofclusters){
+#   if(numberofclusters==2)
+#     impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
+#   if(numberofclusters==4)
+#     impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
+#   print(impfeatorder)
+# }
+# getorderedfeatures(2)
+# data<-data[-c(which(is.na(data$label))),]
 
 ```
+
 ```{r}
+dt<-function(){
 library(caret)
 library(rpart.plot)
 library(e1071)
@@ -228,8 +247,46 @@ dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
                    trControl=trctrl,
                    tuneLength = 10)
 
-prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+tree<- prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 
+}
 ```
+
+```{r}
+library(shiny)
+
+ui<-fluidPage(
+  selectInput("Algorithm", "Choose a clustering approach:",
+              c("none","k-means","hk-means","hierarchical","orclus","proclus","pca-kmeans")),
+  
+  radioButtons("numClust","Select number of clusters",c(2,4),inline = TRUE),
+  p(strong("Decision Tree")),
+  textOutput("out"),
+  plotOutput("Dt"),
+  p(strong("Radial Chart")),
+  textOutput("selected")
+  
+)
+server<-function(input,output){
+   condition<-reactive(input$Algorithm)
+  # output$out<-(condition)
+  
+  viewsel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
+                    else paste("The decision tree for", input$Algorithm,"with number of cluster",input$numClust)
+                
+  )
+  sel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
+                    else paste("The radial chart for", input$Algorithm,"with number of clusters",input$numClust)
+                    
+  )
+  DT<-reactive(if(condition()!="none") dt())
+  output$Dt<-renderPlot({DT()})
+  output$selected<-renderText({sel()})
+  output$out<-renderText({viewsel()})
+  
+}
+shinyApp(ui=ui,server = server)
+```
+
 
   
