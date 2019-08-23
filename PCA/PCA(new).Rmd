@@ -14,7 +14,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 
 
-pc <- prcomp(df_noCorr_scaled)
+pc <- princomp(df_noCorr_scaled,scale. = TRUE)
 plot(pc)
 
 plot(pc,type = "l")
@@ -26,6 +26,7 @@ plot(pc,type = "l")
 
 summary(pc)
 
+
 ```
 
 
@@ -34,6 +35,8 @@ summary(pc)
 ```{r}
 
 library(scatterplot3d)
+
+pc <- prcomp(df_noCorr_scaled,scale. = TRUE)
 
 scatterplot3d(pc$x[,1:3],pch = 16, color = "blue")
 
