@@ -5,8 +5,8 @@
 
 
 // set the dimensions and margins of the graph
-var innerRadius = Math.min(width, height) / 4,
-    outerRadius = Math.min(width, height)/2;   // the outerRadius goes from the middle of the SVG area to the border
+var innerRadius = Math.min(width, height) /4,
+    outerRadius = Math.min(width, height)/3;   // the outerRadius goes from the middle of the SVG area to the border
     
 // Scales
 var x = d3.scaleBand()
@@ -15,9 +15,17 @@ var x = d3.scaleBand()
       .domain(data.map(function(d) { return d.feature; })); // The domain of the X axis is the list of features.
 
 var algo= data.filter(function(d,i) { if (i===1) {return d.algorithm;} });
+
 var y = d3.scaleLinear()
       .range([innerRadius, outerRadius])   // Domain will be define later.
-      .domain([0, 4]); // Domain of Y is from 0 to the max seen in the data
+      .domain([0,1]); // Domain of Y is from 0 to the max seen in the data
+      
+var scaley = d3.scaleLinear()
+      .range([innerRadius-(outerRadius-innerRadius), outerRadius])   // Domain will be define later.
+      .domain([-1,1 ]); // Domain of Y is from 0 to the max seen in the data
+var xAxis = d3.axisLeft()
+      .scale(scaley)
+      .ticks(3);
       
 var tooltip = d3.select("body")
       .append("div")
@@ -34,6 +42,7 @@ var tooltip = d3.select("body")
 svg=svg.append("g")
     .attr("transform", "translate(" +width / 2  + "," + height / 2+ ")");
 
+          
   // Add the bars
   svg.append("g")
     .selectAll("path")
@@ -42,12 +51,13 @@ svg=svg.append("g")
     .append("path")
     .attr("fill", d=>d.scaled_cluster_feature_value<0?"#B53737":"#69b3a2")
     .attr("d", d3.arc()     // imagine your doing a part of a donut plot
-    .innerRadius(innerRadius)
-    .outerRadius(function(d) { return y(d.scaled_cluster_feature_value); })
-    .startAngle(function(d) { return x(d.feature); })
-    .endAngle(function(d) { return x(d.feature) + x.bandwidth(); })
-    .padAngle(0.01)
-    .padRadius(innerRadius))
+      .innerRadius(innerRadius)
+      .outerRadius(function(d) { return y(d.scaled_cluster_feature_value); })
+      .startAngle(function(d) { return x(d.feature); })
+      .endAngle(function(d) { return x(d.feature) + x.bandwidth(); })
+      .padAngle(0.01)
+      .padRadius(innerRadius)
+      )
     .on("mousemove", function(d){
             tooltip
               .style("left", d3.event.pageX - 50 + "px")
@@ -57,6 +67,17 @@ svg=svg.append("g")
         })
     		.on("mouseout", function(d){ tooltip.style("display", "none");});
     
+    svg.append("g")
+    .attr("class", "x axis")
+    .call(xAxis);
+var circles = svg.selectAll("circle")
+          .data([-1,-0.5,0,0.5,1])
+          .enter().append("circle")
+          .attr("r", function(d) {return scaley(d);})
+          .style("fill", "none")
+          .style("stroke", "black")
+          .style("stroke-dasharray", "2,2")
+          .style("stroke-width",".5px");
    // Add the labels
   svg.append("g")
       .selectAll("g")
@@ -64,9 +85,9 @@ svg=svg.append("g")
       .enter()
       .append("g")
         .attr("text-anchor", function(d) { return (x(d.feature) + x.bandwidth() / 2 + Math.PI) % (2 * Math.PI) < Math.PI ? "end" : "start"; })
-        .attr("transform", function(d) { return "rotate(" + ((x(d.feature) + x.bandwidth() / 2) * 180 / Math.PI - 90) + ")"+"translate(" + (y(d.scaled_cluster_feature_value<0?0:d.scaled_cluster_feature_value)+10) + ",0)"; })
+        .attr("transform", function(d) { return "rotate(" + ((x(d.feature) + x.bandwidth() / 2) * 180 / Math.PI - 90) + ")"+"translate(" + (outerRadius+0.03*outerRadius) + ",0)"; })
       .append("text")
-        .text(function(d){return(d.feature+"("+Math.round(d.scaled_cluster_feature_value*100)/100+")")})
+        .text(function(d){return(d.feature)})
         .attr("transform", function(d) { return (x(d.feature) + x.bandwidth() / 2 + Math.PI) % (2 * Math.PI) < Math.PI ? "rotate(180)" : "rotate(0)"; })
         .style("font-size", "11px")
         .attr("alignment-baseline", "middle");
