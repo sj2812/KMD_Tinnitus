@@ -1,71 +1,15 @@
----
-title: "Untitled"
-author: "Abhilash, Kritika, Priyanka, Shivani"
-date: "23 August 2019"
-output: html_document
-runtime: shiny
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-## Motivation
-* Tinnitus is a highly common health problem which severely affects people. As a Tinnitus patient, people need to fill many
-questionnaires which can be tiring.
-
-* If we know the possible sub categories of Tinnitus it would help medical practitioners to provide category specific medical assistance to the patients.
-
-* Understanding the sub categories would also help to identify questionnaires which are only relevant to these sub categories and thus reduce the number questions patients might have to fill.
-
-## Problem Statement
-1) To identify relevant sub-categories of Tinnitus condition
-
-2) To represent/describe the identified clusters and assign most relevant questionnaires respectively.
-
-## Organisation
-
-The project is organised as follows:
-
-* Data preprocessing
-* Global Clustering
-* Subspace Clustering
-* Evaluation
-
-***
-Let us first load all necessary libraries for this project
-```{r Libraries, message=FALSE, warning=FALSE}
-#If any errors are thrown while loading libraries please install the packages commented below
-#install.packages("tidyverse")
-#install.packages("caret")
-#install.packages("rpart.plot")
-#install.packages("e1071")
 library(dplyr)
 library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
-library(factoextra) # clustering visualization
-library(dendextend) # for comparing two dendrograms
 library(r2d3)
-library(sqldf)
-library(caret)
-library(rpart.plot)
 library(e1071)
 library(randomForest)
-library(mlbench)
-library(caret)
-library(e1071)
 library(rJava)
 library(subspace)
 library(orclus)
-library(diceR)
-library(clValid)
 
-```
+## Preprocessing of Dataset
 
-## Data preprocessing 
-
-Now we will step by step do the preprocessing of given data
-
-```{r Dataframe}
 df <- read_rds("190426_charite_tinnitus.rds") %>%
   arrange(.testdatum) %>%
   group_by(.jour_nr) %>%
@@ -101,51 +45,38 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
   ) %>%
   drop_na()
 originaldf <- read_rds("190426_charite_tinnitus.rds")
-```
-Now lets remove 'journ.no' as it is an identifier and will not be useful for analysis.
-
-```{r Dataframe all features}
 df_allF <- select(df,-c(.jour_nr))
-
 #Data frame with all features "Scaled" except journ no
 df_allF_scaled<-scale(df_allF)%>%data.frame()
-```
-
-We will find out the co related columns in the data and drop them
-
-```{r Correlation}
 correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
-
 #cat("\ncorrelation with 90%:\n")
 matriz_cor <- cor(df_allF,method = "spearman")
-
 for (i in 1:nrow(matriz_cor)){
   correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
   matriz_cor[correlations,i] <- NA
-  
   if(length(correlations)> 0){
     #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
     correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations],coef=matriz_cor[i,correlations]))
     rownames(correlated_coloumns) <- NULL
   }
 }
-
 #No correlated columns
-
 #dropping the columns
 df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
-
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
-```
-```{r}
+label <- c()
+
+## Create DT
+
 createDT<-function(final_labels,remove_na)
 { 
   set.seed(123)
   
+  
   # labelling the records 
   df_allF_labeled<-df_allF%>%
-  mutate(label = final_labels)
+    mutate(label = final_labels)
   df_string_labeled<-df_allF_labeled
   
   #Adding "Type" to each cluster number to make it non numeric
@@ -163,17 +94,63 @@ createDT<-function(final_labels,remove_na)
   
   prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 }
-```
-```{r}
+
+## Visualization
+
+feature_summary_scaled<-data.frame(df_allF_scaled%>%
+                                     summarise_each(mean))
+feature_summary<-data.frame(df_allF%>%
+                              summarise_each(mean))
+
+#Finally creating a data frame which can be used for the visualization.
+options(scipen = 999)
+createPlotData <<- function(algo_name,clus_name,cluster_scaled,cluster)
+{ cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
+rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
+cluster_plot_data<-t(cluster_plot_data)%>%data.frame()%>%mutate(algorithm=algo_name,cluster_name=clus_name)
+return(cluster_plot_data)
+}
+
+
+getPlotData <- function(algo_name,final_labels,no_of_clusters)
+{
+  # labelling the records 
+  df_allF_labeled<-df_allF%>%
+    mutate(label = final_labels)
+  df_allF_scaled_labeled<-df_allF_scaled%>%
+    mutate(label = final_labels)
+  
+  # creating cluster feature vectors from obtained labels
+  
+  cluster_features_scaled<-data.frame(df_allF_scaled_labeled%>%
+                                        group_by(label)%>%
+                                        summarise_each(mean))
+  cluster_features<-data.frame(df_allF_labeled%>%
+                                 group_by(label)%>%
+                                 summarise_each(mean))
+  plotData<-list()
+  for(i in seq(1:no_of_clusters))
+  {
+    clus_name<-paste("Type ",i)
+    plotData[[i]]<-createPlotData(algo_name,clus_name,cluster_features_scaled[i,],cluster_features[i,])
+  }
+  return(plotData)
+}
+
+
+## Create DT calling functions
+
 getkmeans<-function(n,removeNA){
   kmclust <- kmeans(df_noCorr_scaled, n)
   km_labels <- kmclust$cluster 
   createDT(km_labels,removeNA)
+  
 }
 gethkmeans<-function(n,removeNA){
   hkmclust <- hkmeans(df_noCorr_scaled, n)
   hkm_labels <- hkmclust$cluster 
   createDT(hkm_labels,removeNA)
+  
 }
 gethierarchical<-function(n,removeNA){
   dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
@@ -181,20 +158,17 @@ gethierarchical<-function(n,removeNA){
   h_labels<-cutree(hc,k=n)
   createDT(h_labels,removeNA)
 }
-getorclus<-function(n,removeNA){
-  orclus_res_k2 <- orclus(x = df_noCorr_scaled,k=n,l = 25, k0 = 20)
-ok2_labels <- orclus_res_k2$cluster
-  createDT(ok2_labels,removeNA)
-}
+
 getproclus<-function(n,removeNA){
+  set.seed(123)
   ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
   labels<-c()
-
-for ( i in 1:n) {
-  for (j in ProClus.clusters.k[[i]]$objects) {
+  
+  for ( i in 1:n) {
+    for (j in ProClus.clusters.k[[i]]$objects) {
       labels[j] <- i
+    }
   }
-}
   createDT(labels,1)
 }
 getpcakmeans<-function(n,removeNA){
@@ -206,122 +180,181 @@ getpcakmeans<-function(n,removeNA){
   createDT(km_labels,removeNA)
 }
 
+getorclus<-function(n,removeNA){
+  set.seed(123)
+  orclus_res_k <- orclus(df_noCorr_scaled,k = n,l = 25, k0 = 20)
+  ok_labels <- orclus_res_k$cluster
+  createDT(ok_labels,removeNA)
+  
+}
+
+## Radial Charts
 
 getkmeansradial<-function(n,removeNA){
   kmclust <- kmeans(df_noCorr_scaled, n)
   km_labels <- kmclust$cluster 
-  cluster_plot_data<-getPlotData("K-means",km_labels,n)
-  
+  return(km_labels)
 }
+
 gethkmeansradial<-function(n,removeNA){
   hkmclust <- hkmeans(df_noCorr_scaled, n)
-  hkm_labels <- hkmclust$cluster 
-  createDT(hkm_labels,removeNA)
+  hkm_labels <- hkmclust$cluster
+  return(hkm_labels)
 }
 gethierarchicalradial<-function(n,removeNA){
   dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
   hc <-agnes(dist_matrix, method = "ward")
   h_labels<-cutree(hc,k=n)
-  createDT(h_labels,removeNA)
+  
+  return(h_labels)
 }
+
 getorclusradial<-function(n,removeNA){
-  orclus_res_k <- orclus(x = df_noCorr_scaled,k=n,l = 25, k0 = 20)
-ok_labels <- orclus_res_k$cluster
-  createDT(ok_labels,removeNA)
+  
+  orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)
+  ok_labels <- orclus_res_k$cluster
+  
+  return(ok_labels)
 }
 getproclusradial<-function(n,removeNA){
+  set.seed(123)
+  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
+  p_labels<-c()
   
+  for ( i in 1:n) {
+    for (j in ProClus.clusters.k[[i]]$objects) {
+      p_labels[j] <- i
+    }
+  }
+  return(p_labels)
 }
+
 getpcakmeansradial<-function(n,removeNA){
+  
   km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
   PC_num <- 18
   df_PC <- km.pc$x[,1:PC_num]
   kmclust <- kmeans(df_PC, n)
   km_labels <- kmclust$cluster 
-  createDT(km_labels,removeNA)
+  return(km_labels) 
 }
-```
 
-```{r}
-dt<-function(approach,numClust){
+## Calling from shiny
 
+dt <- function(approach,numClust){
+  
   if(approach=="kmeans"){
     getkmeans(numClust,0)
   }
-  if(approach=="hkmeans"){
+  else if(approach=="hkmeans"){
     gethkmeans(numClust,0)
   }
-  if(approach=="hierarchical"){
+  else if(approach=="hierarchical"){
     gethierarchical(numClust,0)
   }
-  if(approach=="orclus"){
+  else if(approach=="orclus"){
     getorclus(numClust,0)
   }
-  if(approach=="proclus"){
+  else if(approach=="proclus"){
     getproclus(numClust,1)
   }
-  if(approach=="pca-kmeans"){
+  else if(approach=="pca-kmeans"){
     getpcakmeans(numClust,0)
   }
 }
-radialchart<-function(approach,numClust){
+
+radialchart <- function(approach,numClust){
   if(approach=="kmeans"){
-    getkmeansradial(numClust,0)
+    label <- getkmeansradial(numClust)
   }
-  if(approach=="hkmeans"){
-    gethkmeansradial(numClust,0)
+  else if(approach=="hkmeans"){
+    label <- gethkmeansradial(numClust)
   }
-  if(approach=="hierarchical"){
-    gethierarchicalradial(numClust,0)
+  else if(approach=="hierarchical"){
+    label <- gethierarchicalradial(numClust)
   }
-  if(approach=="orclus"){
-    getorclusradial(numClust,0)
+  else if(approach=="orclus"){
+    label <- getorclusradial(numClust)
   }
-  if(approach=="proclus"){
-    getproclusradial(numClust,1)
+  else if(approach=="proclus"){
+    label <- getproclusradial(numClust)
   }
-  if(approach=="pca-kmeans"){
-    getpcakmeansradial(numClust,0)
+  else if(approach=="pca-kmeans"){
+    label <- getpcakmeansradial(numClust)
   }
-  
+  return(label)
 }
-```
-```{r}
+
+## SHINY APP
+
 library(shiny)
 
 ui<-fluidPage(
-  selectInput("Algorithm", "Choose a clustering approach:",
-              c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
-  
-  radioButtons("numClust","Select number of clusters",c(2,4),inline = TRUE),
-  
-  p(strong("Decision Tree")),
-  textOutput("out"),
-  plotOutput("Dt"),
-  p(strong("Radial Chart")),
-  textOutput("selected"),
-  d3Output("Rc")
-  
+  pageWithSidebar(
+    headerPanel('Tinnitus Analysis'),
+    sidebarPanel(
+      
+      selectInput("Algorithm", "Choose a clustering approach:",
+                  c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
+      
+      radioButtons("numClust","Select number of clusters",c(2,4),inline = TRUE),
+      
+      fluidRow(column(2, verbatimTextOutput("value")))
+    ),
+    mainPanel( 
+      navbarPage(
+        title = 'Visualization Options',
+        tabPanel("Decision Tree",textOutput("out"),plotOutput('Dt')) ,
+        tabPanel("Radial Chart",textOutput("selected"),d3Output('Rc1'),hr(),d3Output('Rc2'),hr(),d3Output('Rc3'),hr(),d3Output('Rc4'))
+      )))
 )
 server<-function(input,output){
-   condition<-reactive(input$Algorithm)
-  # output$out<-(condition)
-  
+
+  condition<-reactive(input$Algorithm)
   viewsel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
-                    else paste("The decision tree for", input$Algorithm,"with number of cluster",input$numClust)
-                
-  )
+                    else paste("The decision tree for", input$Algorithm,"with number of cluster",input$numClust))
+  
   sel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
-                    else paste("The radial chart for", input$Algorithm,"with number of clusters",input$numClust)
-                    
-  )
+                else paste("The radial chart for", input$Algorithm,"with number of clusters",input$numClust))
+  
+  
   DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
-  RC<-reactive(if(condition()!="none") radialchart(input$Algorithm,input$numClust))
+  
   output$Dt<-renderPlot({DT()})
-  output$Rc<-renderD3({RC()})
+  
+  output$Rc1<-renderD3({
+    label <- c()
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
+  output$Rc2 <- renderD3({
+    label <- c()
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
+  output$Rc3<-renderD3({
+    label <- c()
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
+  output$Rc4 <- renderD3({
+    label <- c()
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
+  
   output$selected<-renderText({sel()})
   output$out<-renderText({viewsel()})
-  
 }
 shinyApp(ui=ui,server = server)
-```
+
+
+

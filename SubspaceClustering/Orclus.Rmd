@@ -19,23 +19,23 @@ library(ggvis)
 
 set.seed(123)
 
-subspace_data <- df_scaled
+subspace_data <- df_noCorr_scaled
 tune_lf_sparsity<- data.frame(k = numeric(),dim = numeric(),sparsity = numeric(),proj = numeric())
 
 j<-1
 
-for (k in seq(40,50)) {
-  
-  for (i in seq(10,60)) {
+# for (k in seq(40,50)) {
+#   
+#   for (i in seq(10,60)) {
     
-    orclus.res.k2 <- orclus(x = subspace_data,k=4,l = i, k0 = k)
-    tune_lf_sparsity[j,1] <- k
-    tune_lf_sparsity[j,2] <- i
-    tune_lf_sparsity[j,3] <- orclus.res.k2$sparsity.coefficient
-    tune_lf_sparsity[j,4] <- sum(orclus.res.k2$within.projens)
-    j <- j+1
-  }
-}
+    orclus.res.k2 <- orclus(x = subspace_data,k=4,l = 20, k0 = 25)
+  #   tune_lf_sparsity[j,1] <- k
+  #   tune_lf_sparsity[j,2] <- i
+  #   tune_lf_sparsity[j,3] <- orclus.res.k2$sparsity.coefficient
+  #   tune_lf_sparsity[j,4] <- sum(orclus.res.k2$within.projens)
+  #   j <- j+1
+  # }
+#}
 
 
 
