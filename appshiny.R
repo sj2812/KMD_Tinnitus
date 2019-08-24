@@ -292,10 +292,8 @@ library(shinyjs)
 
 
 
-ui<-fluidRow(
-  uiOutput('sized_plot'),
-  
-  hr(),
+ui<-fluidPage(
+ 
   
   selectInput("Algorithm", "Choose a clustering approach:",
               c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
@@ -332,33 +330,27 @@ server<-function(input,output){
   DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
   
   output$Dt<-renderPlot({DT()})
+  label <- reactive(if(condition()!="none") radialchart(input$Algorithm,input$numClust))
+  cluster_plot_data <- reactive(if(condition()!="none") getPlotData(input$Algorithm,label(),input$numClust))
   
-  output$Rc1<-renderD3({
-   reactive(if(condition()=="none")
-    label <- (radialchart(input$Algorithm,input$numClust)),
-    cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust)),
-    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal"))
+  output$Rc1<-renderD3({ 
+    if(condition()!="none")
+    r2d3(data = cluster_plot_data()[[1]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc2 <- renderD3({
-    
-    label <- (radialchart(input$Algorithm,input$numClust))
-    cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust))
-    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+    if(condition()!="none")
+    r2d3(data = cluster_plot_data()[[2]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc3<-renderD3({
-    
-    label <- (radialchart(input$Algorithm,input$numClust))
-    cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust))
-    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+    if(condition()!="none")
+    r2d3(data = cluster_plot_data()[[3]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc4 <- renderD3({
-    
-    label <- (radialchart(input$Algorithm,input$numClust))
-    cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust))
-    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+    if(condition()!="none")
+    r2d3(data = cluster_plot_data()[[4]], script = "cluster_chart.js",viewer ="internal")
   })
   output$selected<-renderText({sel()})
   
