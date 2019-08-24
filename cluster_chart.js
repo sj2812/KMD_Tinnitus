@@ -37,13 +37,14 @@ var tooltip = d3.select("body")
       .style("border","1px solid #6F257F")
       .style("color","white");
       
-
+svg.selectAll('g').remove();
 // append the svg object
 svg=svg.append("g")
     .attr("transform", "translate(" +width / 2  + "," + height / 2+ ")");
 
-          
+         
   // Add the bars
+  
   svg.append("g")
     .selectAll("path")
     .data(data)
@@ -106,3 +107,5 @@ var circles = svg.selectAll("circle")
       .attr("text-anchor", "middle")  
       .style("font-size", "13px")
       .text(function(d){return d.cluster_name});
+      
+ 

@@ -288,13 +288,20 @@ radialchart <- function(approach,numClust){
 }
 
 library(shiny)
+library(shinyjs)
 
-ui<-fluidPage(
+
+
+ui<-fluidRow(
+  uiOutput('sized_plot'),
+  
+  hr(),
+  
   selectInput("Algorithm", "Choose a clustering approach:",
               c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
   
   radioButtons("numClust","Select number of clusters",c(2,4),inline = TRUE),
-  
+ 
   p(strong("Decision Tree")),
   textOutput("out"),
   plotOutput("Dt"),
@@ -319,7 +326,6 @@ server<-function(input,output){
                 
   )
   DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
-  
   
   output$Dt<-renderPlot({DT()})
   
@@ -349,7 +355,8 @@ server<-function(input,output){
   output$selected<-renderText({sel()})
   
   output$out<-renderText({viewsel()})
-  
-}
-shinyApp(ui=ui,server = server)
 
+  }
+
+app<-shinyApp(ui=ui,server = server)
+runApp(app,display.mode = "auto")
