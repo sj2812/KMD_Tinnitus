@@ -65,6 +65,7 @@ for (i in 1:nrow(matriz_cor)){
 df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
+label <- c()
 
 ## Create DT
 
@@ -265,7 +266,6 @@ dt <- function(approach,numClust){
 }
 
 radialchart <- function(approach,numClust){
-  
   if(approach=="kmeans"){
     label <- getkmeansradial(numClust)
   }
@@ -311,7 +311,7 @@ ui<-fluidPage(
       )))
 )
 server<-function(input,output){
-  
+
   condition<-reactive(input$Algorithm)
   viewsel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
                     else paste("The decision tree for", input$Algorithm,"with number of cluster",input$numClust))
@@ -325,24 +325,28 @@ server<-function(input,output){
   output$Dt<-renderPlot({DT()})
   
   output$Rc1<-renderD3({
+    label <- c()
     label <- radialchart(input$Algorithm,input$numClust)
     cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
     r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc2 <- renderD3({
+    label <- c()
     label <- radialchart(input$Algorithm,input$numClust)
     cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc3<-renderD3({
+    label <- c()
     label <- radialchart(input$Algorithm,input$numClust)
     cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
     r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc4 <- renderD3({
+    label <- c()
     label <- radialchart(input$Algorithm,input$numClust)
     cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
     r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
