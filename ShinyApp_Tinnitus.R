@@ -114,6 +114,7 @@ return(cluster_plot_data)
 
 getPlotData <- function(algo_name,final_labels,no_of_clusters)
 {
+  set.seed(123)
   # labelling the records 
   df_allF_labeled<-df_allF%>%
     mutate(label = final_labels)
@@ -128,6 +129,9 @@ getPlotData <- function(algo_name,final_labels,no_of_clusters)
   cluster_features<-data.frame(df_allF_labeled%>%
                                  group_by(label)%>%
                                  summarise_each(mean))
+  
+  cluster_features <- cluster_features[1:no_of_clusters,]
+  
   plotData<-list()
   for(i in seq(1:no_of_clusters))
   {
@@ -182,6 +186,7 @@ getpcakmeans<-function(n,removeNA){
 
 getorclus<-function(n,removeNA){
   set.seed(123)
+  library(orclus)
   orclus_res_k <- orclus(df_noCorr_scaled,k = n,l = 25, k0 = 20)
   ok_labels <- orclus_res_k$cluster
   createDT(ok_labels,removeNA)
@@ -210,7 +215,8 @@ gethierarchicalradial<-function(n,removeNA){
 }
 
 getorclusradial<-function(n,removeNA){
-  
+  library(orclus)
+  set.seed(123)
   orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)
   ok_labels <- orclus_res_k$cluster
   
@@ -253,6 +259,7 @@ dt <- function(approach,numClust){
     gethierarchical(numClust,0)
   }
   else if(approach=="orclus"){
+    library(orclus)
     getorclus(numClust,0)
   }
   else if(approach=="proclus"){
@@ -307,10 +314,13 @@ ui<-fluidPage(
       navbarPage(
         title = 'Visualization Options',
         tabPanel("Decision Tree",textOutput("out"),plotOutput('Dt')) ,
-        tabPanel("Radial Chart",textOutput("selected"),d3Output('Rc1'),hr(),d3Output('Rc2'),hr(),  
+        tabPanel("Radial Chart",textOutput("selected"), d3Output('Rc1'),
+                 conditionalPanel(
+                   condition = "input.numClust >= 2",
+                   hr(),d3Output("Rc2")),
                  conditionalPanel(
                     condition = "input.numClust >= 3",
-                    d3Output("Rc3")),
+                    hr(),d3Output("Rc3")),
                 conditionalPanel(
                    condition = "input.numClust >= 4",
                    hr(),d3Output("Rc4")),

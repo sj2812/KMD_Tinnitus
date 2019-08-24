@@ -113,6 +113,7 @@ return(cluster_plot_data)
 
 getPlotData <- function(algo_name,final_labels,no_of_clusters)
 {
+  set.seed(123)
   # labelling the records 
   df_allF_labeled<-df_allF%>%
     mutate(label = final_labels)
@@ -127,6 +128,9 @@ getPlotData <- function(algo_name,final_labels,no_of_clusters)
   cluster_features<-data.frame(df_allF_labeled%>%
                                  group_by(label)%>%
                                  summarise_each(mean))
+  
+  cluster_features <- cluster_features[1:no_of_clusters,]
+  
   plotData<-list()
   for(i in seq(1:no_of_clusters))
   {
@@ -182,6 +186,7 @@ getpcakmeans<-function(n,removeNA){
 }
 
 getorclus<-function(n,removeNA){
+  library(orclus)
   set.seed(123)
   orclus_res_k <- orclus(df_noCorr_scaled,k = n,l = 25, k0 = 20)
   ok_labels <- orclus_res_k$cluster
@@ -211,7 +216,8 @@ gethierarchicalradial<-function(n,removeNA){
 }
 
 getorclusradial<-function(n,removeNA){
-  
+  library(orclus)
+  set.seed(123)
   orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)
   ok_labels <- orclus_res_k$cluster
   
@@ -219,6 +225,7 @@ getorclusradial<-function(n,removeNA){
 }
 getproclusradial<-function(n,removeNA){
   set.seed(123)
+  
   ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
   p_labels<-c()
   
@@ -254,6 +261,7 @@ dt <- function(approach,numClust){
     gethierarchical(numClust,0)
   }
   else if(approach=="orclus"){
+    library(orclus)
     getorclus(numClust,0)
   }
   else if(approach=="proclus"){
@@ -276,6 +284,7 @@ radialchart <- function(approach,numClust){
     label <- gethierarchicalradial(numClust)
   }
   else if(approach=="orclus"){
+    library(orclus)
     label <- getorclusradial(numClust)
   }
   else if(approach=="proclus"){
