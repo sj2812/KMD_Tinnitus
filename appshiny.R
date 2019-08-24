@@ -309,8 +309,12 @@ ui<-fluidRow(
   textOutput("selected"),
   d3Output("Rc1"),
   d3Output("Rc2"),
-  d3Output("Rc3"),
-  d3Output("Rc4")
+  conditionalPanel(
+    condition = "input.numClust == 4",
+    d3Output("Rc3"),
+    d3Output("Rc4")
+  )
+  
   
 )
 server<-function(input,output){
@@ -330,24 +334,28 @@ server<-function(input,output){
   output$Dt<-renderPlot({DT()})
   
   output$Rc1<-renderD3({
-    label <- (radialchart(input$Algorithm,input$numClust))
-    cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust))
-    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+   reactive(if(condition()=="none")
+    label <- (radialchart(input$Algorithm,input$numClust)),
+    cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust)),
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal"))
   })
   
   output$Rc2 <- renderD3({
+    
     label <- (radialchart(input$Algorithm,input$numClust))
     cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust))
     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc3<-renderD3({
+    
     label <- (radialchart(input$Algorithm,input$numClust))
     cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust))
     r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc4 <- renderD3({
+    
     label <- (radialchart(input$Algorithm,input$numClust))
     cluster_plot_data <- (getPlotData(input$Algorithm,label,input$numClust))
     r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
@@ -358,5 +366,5 @@ server<-function(input,output){
 
   }
 
-app<-shinyApp(ui=ui,server = server)
-runApp(app,display.mode = "auto")
+shinyApp(ui=ui,server = server)
+
