@@ -242,6 +242,7 @@ gethierarchical<-function(n,removeNA){
 }
 
 getproclus<-function(n,removeNA){
+  set.seed(123)
   ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
   labels<-c()
 
@@ -278,17 +279,17 @@ getkmeansradial<-function(n,removeNA){
   km_labels <- kmclust$cluster 
   cluster_plot_data <<- getPlotData("K-means",km_labels,n)
   
-#   if(n == 2) {
-#     r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-#     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-#   }
-#   else {
-# 
-#     r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-#     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-#     r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-#     r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-#   }
+  if(n == 2) {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  }
+  else {
+
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+  }
  }
 
 gethkmeansradial<-function(n,removeNA){
@@ -296,6 +297,7 @@ gethkmeansradial<-function(n,removeNA){
   hkm_labels <- hkmclust$cluster
   cluster_plot_data <<- getPlotData("HK-means",hkm_labels,n)
     if(n == 2) {
+      print("hello")
     r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
   }
@@ -348,6 +350,7 @@ getorclusradial<-function(n,removeNA){
   
 }
 getproclusradial<-function(n,removeNA){
+  set.seed(123)
    ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
    p_labels<-c()
 
@@ -395,6 +398,8 @@ getpcakmeansradial<-function(n,removeNA){
 
 ```{r}
 dt<-function(approach,numClust){
+  
+  
 
   if(approach=="kmeans"){
     getkmeans(numClust,0)
@@ -451,7 +456,7 @@ ui<-fluidPage(
       
       radioButtons("numClust","Select number of clusters",c(2,4),inline = TRUE),
       
-      fluidRow(column(3, verbatimTextOutput("value")))
+      fluidRow(column(2, verbatimTextOutput("value")))
         ),
   mainPanel( 
   p(strong("Decision Tree")),
@@ -476,13 +481,10 @@ server<-function(input,output){
                     
   )
   
-  chart <- reactive(  if(n == 2) {
-    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-  })
+
   
   DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
-  RC<-reactive(if(condition()!="none") if(radialchart(input$Algorithm,input$numClust)) chart())
+  RC<-reactive(if(condition()!="none") radialchart(input$Algorithm,input$numClust))
   
  
   
