@@ -279,25 +279,26 @@ getkmeansradial<-function(n,removeNA){
   km_labels <- kmclust$cluster 
   cluster_plot_data <<- getPlotData("K-means",km_labels,n)
   
-  if(n == 2) {
-    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  return(cluster_plot_data)
+  
+ #  if(n == 2) {
+ #    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+ #    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+ #  }
+ #  else {
+ # 
+ #    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+ #    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+ #    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+ #    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+ #  }
   }
-  else {
-
-    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-  }
- }
 
 gethkmeansradial<-function(n,removeNA){
   hkmclust <- hkmeans(df_noCorr_scaled, n)
   hkm_labels <- hkmclust$cluster
   cluster_plot_data <<- getPlotData("HK-means",hkm_labels,n)
     if(n == 2) {
-      print("hello")
     r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
   }
@@ -459,13 +460,11 @@ ui<-fluidPage(
       fluidRow(column(2, verbatimTextOutput("value")))
         ),
   mainPanel( 
-  p(strong("Decision Tree")),
-  textOutput("out"),
-  plotOutput("Dt"),
-  p(strong("Radial Chart")),
-  textOutput("selected"),
-  d3Output("Rc")
-   ))
+    navbarPage(
+      title = 'Visualization Options',
+      tabPanel("Decision Tree",textOutput("out"),plotOutput('Dt')) ,
+      tabPanel("Radial Chart",textOutput("selected"),d3Output('Rc'))
+   )))
 )
 server<-function(input,output){
    condition<-reactive(input$Algorithm)
@@ -481,12 +480,11 @@ server<-function(input,output){
                     
   )
   
-
+  
   
   DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
   RC<-reactive(if(condition()!="none") radialchart(input$Algorithm,input$numClust))
   
- 
   
   output$Dt<-renderPlot({DT()})
   output$Rc<-renderD3({ RC()})
