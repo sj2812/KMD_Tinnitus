@@ -299,7 +299,7 @@ ui<-fluidPage(
       selectInput("Algorithm", "Choose a clustering approach:",
                   c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
       
-      radioButtons("numClust","Select number of clusters",c(2,4),inline = TRUE),
+      numericInput("numClust","Select number of clusters",min =2,max = 9,value = 2),
       
       fluidRow(column(2, verbatimTextOutput("value")))
     ),
