@@ -589,7 +589,7 @@ createDT(p2_labels,removeNA)
 ```{r Model Run k4}
 set.seed(123)
 removeNA<- 0
-num_clusters<- 4
+num_clusters<-4
 
 # k means
 set.seed(123)
