@@ -299,7 +299,7 @@ ui<-fluidPage(
       selectInput("Algorithm", "Choose a clustering approach:",
                   c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
       
-      numericInput("numClust","Select number of clusters",min =2,max = 9,value = 2),
+      numericInput("numClust","Select number of clusters",min =2,max = 10,value = 2),
       
       fluidRow(column(2, verbatimTextOutput("value")))
     ),
@@ -307,7 +307,32 @@ ui<-fluidPage(
       navbarPage(
         title = 'Visualization Options',
         tabPanel("Decision Tree",textOutput("out"),plotOutput('Dt')) ,
-        tabPanel("Radial Chart",textOutput("selected"),d3Output('Rc1'),hr(),d3Output('Rc2'),hr(),d3Output('Rc3'),hr(),d3Output('Rc4'))
+        tabPanel("Radial Chart",textOutput("selected"),d3Output('Rc1'),hr(),d3Output('Rc2'),hr(),  
+                 conditionalPanel(
+                    condition = "input.numClust >= 3",
+                    d3Output("Rc3")),
+                conditionalPanel(
+                   condition = "input.numClust >= 4",
+                   hr(),d3Output("Rc4")),
+                conditionalPanel(
+                  condition = "input.numClust >= 5",
+                  hr(),d3Output("Rc5")),
+                conditionalPanel(
+                  condition = "input.numClust >= 6",
+                  hr(),d3Output("Rc6")),
+                conditionalPanel(
+                  condition = "input.numClust >= 7",
+                  hr(),d3Output("Rc7")),
+                conditionalPanel(
+                  condition = "input.numClust >= 8",
+                  hr(),d3Output("Rc8")),
+                conditionalPanel(
+                  condition = "input.numClust >= 9",
+                  hr(),d3Output("Rc9")),
+                conditionalPanel(
+                  condition = "input.numClust >= 10",
+                  hr(),d3Output("Rc10"))
+          )
       )))
 )
 server<-function(input,output){
@@ -356,7 +381,53 @@ server<-function(input,output){
     r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
   })
   
+  output$Rc5 <- renderD3({
+    label <- NULL
+    cluster_plot_data <- NULL
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[5]], script = "cluster_chart.js",viewer ="internal")
+  })
   
+  output$Rc6 <- renderD3({
+    label <- NULL
+    cluster_plot_data <- NULL
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[6]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
+  output$Rc7 <- renderD3({
+    label <- NULL
+    cluster_plot_data <- NULL
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[7]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
+  output$Rc8 <- renderD3({
+    label <- NULL
+    cluster_plot_data <- NULL
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[8]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
+  output$Rc9 <- renderD3({
+    label <- NULL
+    cluster_plot_data <- NULL
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[9]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
+  output$Rc10 <- renderD3({
+    label <- NULL
+    cluster_plot_data <- NULL
+    label <- radialchart(input$Algorithm,input$numClust)
+    cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
+    r2d3(data = cluster_plot_data[[10]], script = "cluster_chart.js",viewer ="internal")
+  })
   output$selected<-renderText({sel()})
   output$out<-renderText({viewsel()})
 }
