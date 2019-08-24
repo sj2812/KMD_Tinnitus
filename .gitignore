@@ -3,3 +3,8 @@
 .RData
 .Ruserdata
 Rplot.pdf
+<<<<<<< HEAD
+KMD_Tinnitus_analysis.html
+=======
+Kmd_Tinnitus/app.R
+>>>>>>> 21a6dea39292c984b91b72307a8230987375c05c

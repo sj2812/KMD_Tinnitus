@@ -15,11 +15,9 @@ library(rJava)
 library(subspace)
 library(r2d3)
 library(tidyverse)
+set.seed(123)
 
 ProClus.clusters.k2<- ProClus(df_noCorr_scaled,k=2,d=70)
-
-k2_cluster1<-ProClus.clusters.k2[[1]]$objects
-k2_cluster2<-ProClus.clusters.k2[[2]]$objects
 
 ```
 
@@ -27,17 +25,13 @@ k2_cluster2<-ProClus.clusters.k2[[2]]$objects
 
 labels<-c()
 
-for(i in k2_cluster1){
-
-  labels[i] <- 1
-
-}
-for(i in k2_cluster2){
-
-  labels[i]<- 2
-
+for ( i in 1:2) {
+  for (j in ProClus.clusters.k2[[i]]$objects) {
+      labels[j] <- i
+  }
 }
 
+labels
 
 ```
 
@@ -162,7 +156,8 @@ Proclus with k = 4
 
 ```{r}
 
-ProClus.clusters.k4 <- ProClus(df_scaled,k=4,d = 20)
+set.seed(123)
+ProClus.clusters.k4 <- ProClus(df_noCorr_scaled,k=4,d = 20)
 
 k4_cluster1<-ProClus.clusters.k4[[1]]$objects
 k4_cluster2<-ProClus.clusters.k4[[2]]$objects
@@ -198,7 +193,25 @@ for(i in k4_cluster4){
 
 }
 
+labels
+
+
+
 ```
+
+
+```{r}
+label<-c()
+
+for ( i in 1:4) {
+  for (j in ProClus.clusters.k4[[i]]$objects) {
+      label[j] <- i
+  }
+}
+
+label
+```
+
 
 
 ```{r}

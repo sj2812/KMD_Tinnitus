@@ -50,8 +50,6 @@ library(rpart.plot)
 library(e1071)
 library(randomForest)
 library(mlbench)
-library(caret)
-library(e1071)
 library(rJava)
 library(subspace)
 library(orclus)
@@ -159,38 +157,38 @@ plot(1:k.max, wss,
 Create different samples (with replacement) of data from the original dataset. With varying data (different samples), we will can check if the clustering results are stable or not. So we are plotting a Box-plot for each values of K against "Total within sum of square errors (totwss)". We need to check if the result follows the same trend as the original elbow method does, or there is a significant change in the plot. 
 
 ```{r Bootstrap}
-#No. of Bootsamples to be created
-bootsamplesize <- seq(1:100)
-
-max_k <-seq(1:12) 
-wss.boot <- data.frame()
-
-set.seed(123)
-for(i in bootsamplesize){
-
-  #Create Index with replacement
-  index <- sample(1:nrow(df_noCorr_scaled),nrow(df_noCorr_scaled),replace = T)
-  
-  #create samples from the index
-  dfSample <-  df_noCorr_scaled[index,]
-  
-  #run for each value of k for the current sample  
-  for(k in max_k){
-      
-    kmclust <- kmeans(dfSample,k,nstart=50,iter.max = 25)
-    
-    #Store the data (1 row) of current K and withinss in the dataframe  
-    wss.boot <- rbind(wss.boot, c(k,kmclust$tot.withinss))
-    
-  }
-}
-
-colnames(wss.boot) <- c('k','totwss')
-
-
-#Plot the Data
-boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
-
+# #No. of Bootsamples to be created
+# bootsamplesize <- seq(1:100)
+# 
+# max_k <-seq(1:12) 
+# wss.boot <- data.frame()
+# 
+# set.seed(123)
+# for(i in bootsamplesize){
+# 
+#   #Create Index with replacement
+#   index <- sample(1:nrow(df_noCorr_scaled),nrow(df_noCorr_scaled),replace = T)
+#   
+#   #create samples from the index
+#   dfSample <-  df_noCorr_scaled[index,]
+#   
+#   #run for each value of k for the current sample  
+#   for(k in max_k){
+#       
+#     kmclust <- kmeans(dfSample,k,nstart=50,iter.max = 25)
+#     
+#     #Store the data (1 row) of current K and withinss in the dataframe  
+#     wss.boot <- rbind(wss.boot, c(k,kmclust$tot.withinss))
+#     
+#   }
+# }
+# 
+# colnames(wss.boot) <- c('k','totwss')
+# 
+# 
+# #Plot the Data
+# boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
+# 
 
 ```
 
@@ -421,7 +419,9 @@ createDT<-function(final_labels,remove_na)
                      trControl=trctrl,
                      tuneLength = 10)
   
-  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+  prp(dtree_fit$finalModel,extra = 2, box.palette = "Reds", tweak = 1.5,varlen
+=-10, branch.type = 5)
+  #rpart.plot::rpart.plot(dtree_fit$finalModel, branch.type = 5, digits = 5, tweak = 1.9, fallen.leaves = FALSE)
 }
 
 ```
@@ -581,7 +581,7 @@ cluster_plot_data<-getPlotData("Proclus",p2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 createDT(p2_labels,removeNA)
-applyrf(p2_labels,2,1000,5) 
+#applyrf(p2_labels,2,1000,5) 
 
 ```
 
@@ -674,7 +674,7 @@ r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="interna
 r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 createDT(p4_labels,removeNA)
-applyrf(p4_labels,2,1000,12)
+#applyrf(p4_labels,2,1000,12)
 
 ```
 ## Evaluation :
