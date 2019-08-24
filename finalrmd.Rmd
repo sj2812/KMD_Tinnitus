@@ -139,7 +139,7 @@ df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
 
 
-
+cluster_plot_data <<- list()
 
 ```
 
@@ -278,18 +278,18 @@ getkmeansradial<-function(n,removeNA){
   km_labels <- kmclust$cluster 
   cluster_plot_data <<- getPlotData("K-means",km_labels,n)
   
-  if(n == 2) {
-    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-  }
-  else {
-
-    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-    r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-  }
-}
+#   if(n == 2) {
+#     r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+#     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+#   }
+#   else {
+# 
+#     r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+#     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+#     r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+#     r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+#   }
+ }
 
 gethkmeansradial<-function(n,removeNA){
   hkmclust <- hkmeans(df_noCorr_scaled, n)
@@ -442,18 +442,25 @@ radialchart <- function(approach,numClust){
 library(shiny)
 
 ui<-fluidPage(
-  selectInput("Algorithm", "Choose a clustering approach:",
-              c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
+   pageWithSidebar(
+        headerPanel('Tinnitus Analysis'),
+        sidebarPanel(
   
-  radioButtons("numClust","Select number of clusters",c(2,4),inline = TRUE),
-  
+      selectInput("Algorithm", "Choose a clustering approach:",
+                  c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
+      
+      radioButtons("numClust","Select number of clusters",c(2,4),inline = TRUE),
+      
+      fluidRow(column(3, verbatimTextOutput("value")))
+        ),
+  mainPanel( 
   p(strong("Decision Tree")),
   textOutput("out"),
   plotOutput("Dt"),
   p(strong("Radial Chart")),
   textOutput("selected"),
   d3Output("Rc")
-  
+   ))
 )
 server<-function(input,output){
    condition<-reactive(input$Algorithm)
@@ -468,15 +475,19 @@ server<-function(input,output){
               else paste("The radial chart for", input$Algorithm,"with number of clusters",input$numClust)
                     
   )
+  
+  chart <- reactive(  if(n == 2) {
+    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  })
+  
   DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
-  RC<-reactive(if(condition()!="none") radialchart(input$Algorithm,input$numClust))
+  RC<-reactive(if(condition()!="none") if(radialchart(input$Algorithm,input$numClust)) chart())
   
  
   
   output$Dt<-renderPlot({DT()})
-  output$Rc<-renderD3({ RC()
-   column( r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal"), 
-    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal"))})
+  output$Rc<-renderD3({ RC()})
   output$selected<-renderText({sel()})
   output$out<-renderText({viewsel()})
   
