@@ -323,32 +323,28 @@ server<-function(input,output){
   output$Dt<-renderPlot({DT()})
   
   output$Rc1<-renderD3({
-    label <- NULL
-    cluster_plot_data <- NULL
+    label <- c()
     label <- radialchart(input$Algorithm,input$numClust)
     cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
     r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc2 <- renderD3({
-    label <- NULL
-    cluster_plot_data <- NULL
+    label <- c()
     label <- radialchart(input$Algorithm,input$numClust)
     cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
     r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc3<-renderD3({
-    label <- NULL
-    cluster_plot_data <- NULL
+    label <- c()
     label <- radialchart(input$Algorithm,input$numClust)
     cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
     r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
   })
   
   output$Rc4 <- renderD3({
-    label <- NULL
-    cluster_plot_data <- NULL
+    label <- c()
     label <- radialchart(input$Algorithm,input$numClust)
     cluster_plot_data <- getPlotData(input$Algorithm,label,input$numClust)
     r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
