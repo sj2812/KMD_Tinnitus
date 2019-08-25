@@ -1,12 +1,20 @@
 library(dplyr)
 library(tidyverse)  # data manipulation
 library(cluster)    # clustering algorithms
+library(factoextra) # clustering visualization
+library(dendextend) # for comparing two dendrograms
 library(r2d3)
+library(sqldf)
+library(caret)
+library(rpart.plot)
 library(e1071)
 library(randomForest)
+library(mlbench)
 library(rJava)
 library(subspace)
 library(orclus)
+library(diceR)
+library(clValid)
 
 ## Preprocessing of Dataset
 
