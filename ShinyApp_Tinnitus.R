@@ -313,7 +313,7 @@ ui<-fluidPage(
     sidebarPanel(
       
       selectInput("Algorithm", "Choose a clustering approach:",
-                  c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
+                  c("none","kmeans","hkmeans","hierarchical","orclus","pca-kmeans")),
       
       numericInput("numClust","Select number of clusters",min =2,max = 10,value = 2),
       

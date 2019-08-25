@@ -9,6 +9,40 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+
+```{r}
+
+library(caret)
+library(rpart.plot)
+library(e1071)
+
+createD<-function(final_labels)
+{ 
+  set.seed(123)
+  
+  # labelling the records 
+  df_allF_labeled<-df_allF%>%
+  mutate(label = final_labels)
+  df_string_labeled<-df_allF_labeled
+  
+  #Adding "Type" to each cluster number to make it non numeric
+  df_string_labeled$label<-sub("^","Type ",df_allF_labeled$label)
+  
+  trctrl <- trainControl(method = "boot", number = 10)
+  dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                     parms = list(split = "information"),
+                     trControl=trctrl,
+                     tuneLength = 10)
+  
+  prp(dtree_fit$finalModel,extra = 2, box.palette = "Reds", tweak = 1.5,varlen
+=-10, branch.type = 5)
+  #rpart.plot::rpart.plot(dtree_fit$finalModel, branch.type = 5, digits = 5, tweak = 1.9, fallen.leaves = FALSE)
+}
+```
+
+
+
 ORCLUS CLUSTERING
 
 
@@ -24,18 +58,23 @@ tune_lf_sparsity<- data.frame(k = numeric(),dim = numeric(),sparsity = numeric()
 
 j<-1
 
-# for (k in seq(40,50)) {
-#   
-#   for (i in seq(10,60)) {
-    
-    orclus.res.k2 <- orclus(x = subspace_data,k=2,l = 20, k0 = 25)
-  #   tune_lf_sparsity[j,1] <- k
-  #   tune_lf_sparsity[j,2] <- i
-  #   tune_lf_sparsity[j,3] <- orclus.res.k2$sparsity.coefficient
-  #   tune_lf_sparsity[j,4] <- sum(orclus.res.k2$within.projens)
-  #   j <- j+1
-  # }
-#}
+ for (k in seq(10,30,by = 5)) {
+
+   for (i in seq(20,60,by = 5)) {
+
+    orclus.res.k2 <- orclus(x = subspace_data,k=2,l = i, k0 = k)
+     tune_lf_sparsity[j,1] <- k
+     tune_lf_sparsity[j,2] <- i
+     tune_lf_sparsity[j,3] <- orclus.res.k2$sparsity.coefficient
+     tune_lf_sparsity[j,4] <- sum(orclus.res.k2$within.projens)
+     j <- j+1
+     
+     orclus_labels <- orclus.res.k2$cluster
+     createD(orclus_labels)
+     cat("Dimension =",i,"K = ", k)
+   }
+}
+
 
 
 
