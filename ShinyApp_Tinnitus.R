@@ -196,7 +196,12 @@ getpcakmeans<-function(n,removeNA){
 getorclus<-function(n,removeNA){
   set.seed(123)
   library(orclus)
-  orclus_res_k <- orclus(df_noCorr_scaled,k = n,l = 25, k0 = 20)
+  if(n == 2)
+  {orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)}
+  else
+  {
+    orclus_res_k4 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 20, k0 = 31)
+  }
   ok_labels <- orclus_res_k$cluster
   createDT(ok_labels,removeNA)
   
@@ -226,7 +231,13 @@ gethierarchicalradial<-function(n,removeNA){
 getorclusradial<-function(n,removeNA){
   library(orclus)
   set.seed(123)
-  orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)
+  if(n == 2)
+  {orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)}
+  else
+  {
+    orclus_res_k4 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 20, k0 = 31)
+    }
+  
   ok_labels <- orclus_res_k$cluster
   
   return(ok_labels)
