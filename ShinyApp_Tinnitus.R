@@ -81,7 +81,6 @@ createDT<-function(final_labels,remove_na)
 { 
   set.seed(123)
   
-  
   # labelling the records 
   df_allF_labeled<-df_allF%>%
     mutate(label = final_labels)
@@ -100,7 +99,9 @@ createDT<-function(final_labels,remove_na)
                      trControl=trctrl,
                      tuneLength = 10)
   
-  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+  prp(dtree_fit$finalModel,extra = 2, box.palette = "Reds", tweak = 1.5,varlen
+      =-10, branch.type = 5)
+  #rpart.plot::rpart.plot(dtree_fit$finalModel, branch.type = 5, digits = 5, tweak = 1.9, fallen.leaves = FALSE)
 }
 
 ## Visualization

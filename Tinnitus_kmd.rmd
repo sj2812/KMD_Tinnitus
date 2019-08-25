@@ -215,6 +215,7 @@ cluster_features<-data.frame(df_allF_labeled%>%
   cluster_plot_data<-getPlotData("Kmeans",km_labels,numClust)
   createDT(km_labels,0)
   
+  
   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 ``` 
