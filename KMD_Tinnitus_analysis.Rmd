@@ -326,17 +326,10 @@ Proclus is based on K-mediods and uses three phase approach: initialization, ite
 
 #For K = 2
 ProClus_clusters_k2<- ProClus(df_noCorr_scaled,k=2,d=70)
-#Getting each cluster elements
-k2_cluster1<-ProClus_clusters_k2[[1]]$objects
-k2_cluster2<-ProClus_clusters_k2[[2]]$objects
 
 # For K = 4
 ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=70)
-#Getting each cluster elements
-k4_cluster1<-ProClus_clusters_k4[[1]]$objects
-k4_cluster2<-ProClus_clusters_k4[[2]]$objects
-k4_cluster3<-ProClus_clusters_k4[[3]]$objects
-k4_cluster4<-ProClus_clusters_k4[[4]]$objects
+
 
 ```
 
@@ -569,14 +562,13 @@ applyrf(ok2_labels,2,1500,10)
 # Proclus
 set.seed(123)
 removeNA <- 1
-p2_labels<-c()
-for(i in k2_cluster1){
-  p2_labels[i] <- 1
-}
-for(i in k2_cluster2){
-
-  p2_labels[i]<- 2
-}
+  p2_labels<-c()
+  
+  for ( i in 1:num_clusters) {
+    for (j in ProClus.clusters.k2[[i]]$objects) {
+      p2_labels[j] <- i
+    }
+  }
 cluster_plot_data<-getPlotData("Proclus",p2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
@@ -653,21 +645,13 @@ applyrf(ok4_labels,2,1500,12)
 # Proclus
 set.seed(123)
 removeNA <- 1
-p4_labels<-c()
-for(i in k4_cluster1){
-  p4_labels[i] <- 1
-}
-for(i in k4_cluster2){
-
-  p4_labels[i]<- 2
-}
-for(i in k4_cluster3){
-  p4_labels[i] <- 3
-}
-for(i in k4_cluster4){
-
-  p4_labels[i]<- 4
-}
+  p4_labels<-c()
+  
+  for ( i in 1:num_clusters) {
+    for (j in ProClus.clusters.k4[[i]]$objects) {
+      p4_labels[j] <- i
+    }
+  }
 cluster_plot_data<-getPlotData("Proclus",p4_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")

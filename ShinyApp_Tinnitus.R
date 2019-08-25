@@ -153,7 +153,7 @@ getPlotData <- function(algo_name,final_labels,no_of_clusters)
 ## Create DT calling functions
 
 getkmeans<-function(n,removeNA){
-  kmclust <- kmeans(df_noCorr_scaled, n)
+  kmclust <- kmeans(df_noCorr_scaled, n, nstart=50,iter.max = 15)
   km_labels <- kmclust$cluster 
   createDT(km_labels,removeNA)
   
