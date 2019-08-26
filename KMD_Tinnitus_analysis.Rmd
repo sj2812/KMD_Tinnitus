@@ -325,13 +325,13 @@ Proclus is based on K-mediods and uses three phase approach: initialization, ite
 ```{r Proclus}
 
 #For K = 2
-ProClus_clusters_k2<- ProClus(df_noCorr_scaled,k=2,d=70)
+ProClus_clusters_k2<- ProClus(df_noCorr_scaled,k=2,d=20)
 #Getting each cluster elements
 k2_cluster1<-ProClus_clusters_k2[[1]]$objects
 k2_cluster2<-ProClus_clusters_k2[[2]]$objects
 
 # For K = 4
-ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=70)
+ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=20)
 #Getting each cluster elements
 k4_cluster1<-ProClus_clusters_k4[[1]]$objects
 k4_cluster2<-ProClus_clusters_k4[[2]]$objects
