@@ -4,7 +4,7 @@ author: "Abhilash, Kritika, Priyanka, Shivani"
 date: "25/08/2019"
 output: html_document
 params:
-  k: 2
+  k: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -58,6 +58,7 @@ library(subspace)
 library(orclus)
 library(diceR)
 library(clValid)
+library(devtools)
 
 ```
 
@@ -218,7 +219,7 @@ cluster_features<-data.frame(df_allF_labeled%>%
   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 ``` 
-```{r,echo=(numClust==3)}
+```{r,eval= =(numClust>3)}
   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 ```
 ```{r}
@@ -231,7 +232,7 @@ cluster_features<-data.frame(df_allF_labeled%>%
   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 ```
-```{r,echo=(numClust==3)}
+```{r,echo=(numClust>3)}
   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 ```
 ```{r}
@@ -244,13 +245,16 @@ cluster_features<-data.frame(df_allF_labeled%>%
   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 ```
-```{r,echo=(numClust==3)}
+```{r,echo=(numClust>3)}
   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 ```
 ```{r}
 
   set.seed(123)
+ options(myseed=42)
+
   ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=numClust,d=70)
+  
   labels<-c()
   
   for ( i in 1:numClust) {
@@ -264,7 +268,7 @@ cluster_features<-data.frame(df_allF_labeled%>%
   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 ```
-```{r,echo=(numClust==3)}
+```{r}
   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 ```
 ```{r}
@@ -278,7 +282,7 @@ cluster_features<-data.frame(df_allF_labeled%>%
   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 ```
-```{r,echo=(numClust==3)}
+```{r,echo=(numClust>3)}
   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 ```
 ```{r}
