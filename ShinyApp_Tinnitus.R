@@ -81,7 +81,6 @@ createDT<-function(final_labels,remove_na)
 { 
   set.seed(123)
   
-  
   # labelling the records 
   df_allF_labeled<-df_allF%>%
     mutate(label = final_labels)
@@ -100,7 +99,9 @@ createDT<-function(final_labels,remove_na)
                      trControl=trctrl,
                      tuneLength = 10)
   
-  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+  prp(dtree_fit$finalModel,extra = 2, box.palette = "Reds", tweak = 1.5,varlen
+      =-10, branch.type = 5)
+  #rpart.plot::rpart.plot(dtree_fit$finalModel, branch.type = 5, digits = 5, tweak = 1.9, fallen.leaves = FALSE)
 }
 
 ## Visualization
@@ -153,7 +154,7 @@ getPlotData <- function(algo_name,final_labels,no_of_clusters)
 ## Create DT calling functions
 
 getkmeans<-function(n,removeNA){
-  kmclust <- kmeans(df_noCorr_scaled, n)
+  kmclust <- kmeans(df_noCorr_scaled, n, nstart=50,iter.max = 15)
   km_labels <- kmclust$cluster 
   createDT(km_labels,removeNA)
   
@@ -195,7 +196,12 @@ getpcakmeans<-function(n,removeNA){
 getorclus<-function(n,removeNA){
   set.seed(123)
   library(orclus)
-  orclus_res_k <- orclus(df_noCorr_scaled,k = n,l = 25, k0 = 20)
+  if(n == 2)
+  {orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)}
+  else
+  {
+    orclus_res_k4 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 20, k0 = 31)
+  }
   ok_labels <- orclus_res_k$cluster
   createDT(ok_labels,removeNA)
   
@@ -225,7 +231,13 @@ gethierarchicalradial<-function(n,removeNA){
 getorclusradial<-function(n,removeNA){
   library(orclus)
   set.seed(123)
-  orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)
+  if(n == 2)
+  {orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)}
+  else
+  {
+    orclus_res_k4 <- orclus(x = df_noCorr_scaled,k=num_clusters,l = 20, k0 = 31)
+    }
+  
   ok_labels <- orclus_res_k$cluster
   
   return(ok_labels)
@@ -312,7 +324,7 @@ ui<-fluidPage(
     sidebarPanel(
       
       selectInput("Algorithm", "Choose a clustering approach:",
-                  c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
+                  c("none","kmeans","hkmeans","hierarchical","orclus","pca-kmeans")),
       
       numericInput("numClust","Select number of clusters",min =2,max = 10,value = 2),
       

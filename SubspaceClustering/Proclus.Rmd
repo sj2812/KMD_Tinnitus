@@ -19,6 +19,9 @@ set.seed(123)
 
 ProClus.clusters.k2<- ProClus(df_noCorr_scaled,k=2,d=70)
 
+k2_cluster1<-ProClus.clusters.k2[[1]]$objects
+k2_cluster2<-ProClus.clusters.k2[[2]]$objects
+
 ```
 
 ```{r}
@@ -31,9 +34,23 @@ for ( i in 1:2) {
   }
 }
 
-labels
+#labels
 
 ```
+
+
+```{r}
+
+#K = 2
+
+df_proclus_k2_cluster1 <- df_noCorr[k2_cluster1,which(ProClus_clusters_k2[[1]][["subspace"]] == TRUE)]
+df_proclus_k2_cluster2 <- df_noCorr[k2_cluster2,which(ProClus_clusters_k2[[2]][["subspace"]] == TRUE)]
+
+
+
+
+```
+
 
 
 ```{r}
@@ -164,6 +181,8 @@ k4_cluster2<-ProClus.clusters.k4[[2]]$objects
 k4_cluster3<-ProClus.clusters.k4[[3]]$objects
 k4_cluster4<-ProClus.clusters.k4[[4]]$objects
 
+
+
 ```
 
 
@@ -193,24 +212,20 @@ for(i in k4_cluster4){
 
 }
 
-labels
 
 
+# K = 4
 
-```
-
-
-```{r}
-label<-c()
+labels<-c()
 
 for ( i in 1:4) {
   for (j in ProClus.clusters.k4[[i]]$objects) {
-      label[j] <- i
+      labels[j] <- i
   }
 }
 
-label
 ```
+
 
 
 
