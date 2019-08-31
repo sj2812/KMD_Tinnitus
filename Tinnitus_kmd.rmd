@@ -331,14 +331,14 @@ getpcakmeanslabels<-function(numClust){
   return(list("labels"=pckm_labels,"numClust"=numClust,"removeNA"=0))
 }
 ```
-##User configuration
+## User configuration
 This chunk can be used for Configuration of different approaches. Function calls to get the cluster assignment of the approches.
 ```{r} 
   kmeansres<-getKmeanslabels(6)
   hierarchicalres<-gethierarchicallabels(6)
   hkmeansres<-gethKmeanslabels(4)
   proclusres<-getprocluslabels(5)
-  orclusres<-getorcluslabels(3)
+  orclusres<-getorcluslabels(4)
   pckmres<-getpcakmeanslabels(2)
 ```
 
