@@ -135,6 +135,110 @@ df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
 ```
+## Elbow Method
+Elbow method for getting optimal value of k. The idea behind elbow method is to to define number of clusters such that the total within-cluster sum of square (WSS) is minimized. The value of chosen k is such that adding another cluster does not affect the overall wss much.
+```{r Elbow Method}
+set.seed(123)
+# Elbow method to get best k from k = 2 to k = 12.
+k.max <- 12
+rownames( df_noCorr_scaled ) <- seq_len( nrow( df_noCorr_scaled ) )
+wss <- sapply(1:k.max, 
+              function(k){kmeans(df_noCorr_scaled, k, nstart=50,iter.max = 15 )$tot.withinss})
+wss
+plot(1:k.max, wss,
+     type="b", pch = 19, frame = FALSE, 
+     xlab="Number of clusters K",
+     ylab="Total within-clusters sum of squares")
+```
+
+
+## Bootstrap Sampling
+
+Create different samples (with replacement) of data from the original dataset. With varying data (different samples), we will can check if the clustering results are stable or not. So we are plotting a Box-plot for each values of K against "Total within sum of square errors (totwss)". We need to check if the result follows the same trend as the original elbow method does, or there is a significant change in the plot. 
+
+```{r Bootstrap}
+#No. of Bootsamples to be created
+bootsamplesize <- seq(1:100)
+
+max_k <-seq(1:12)
+wss.boot <- data.frame()
+
+set.seed(123)
+for(i in bootsamplesize){
+
+  #Create Index with replacement
+  index <- sample(1:nrow(df_noCorr_scaled),nrow(df_noCorr_scaled),replace = T)
+
+  #create samples from the index
+  dfSample <-  df_noCorr_scaled[index,]
+
+  #run for each value of k for the current sample
+  for(k in max_k){
+
+    kmclust <- kmeans(dfSample,k,nstart=50,iter.max = 25)
+
+    #Store the data (1 row) of current K and withinss in the dataframe
+    wss.boot <- rbind(wss.boot, c(k,kmclust$tot.withinss))
+
+  }
+}
+
+colnames(wss.boot) <- c('k','totwss')
+
+
+#Plot the Data
+boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "Bootsampled Data: Kmeans Cluster withinss")
+
+
+```
+
+
+## Hierarchical clustering
+
+Hierarchical clustering can be done in two ways :
+1) Top Down : Start with the entire data as a cluster and break them down until each point is a cluster in itself.
+2) Bottom up : Start from individual points as clusters and merge them based on similarities until one cluster if formed.
+
+There are different ways to calculate the distance/ similarity between individual points and in between the clusters which can be a very important factor in deciding the final cluster results.
+
+So we first create a list of these methods and then create clusters for each combination.
+
+Then we can calculate the clusters. The ac value of each cluster gives the quality/ tightness of each cluster. The closer the value is to 1 the better are the results.
+
+**the agglomerative coefficient, measuring the clustering structure of the dataset.
+
+For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes.**
+```{r Hierarchical Tune, echo=FALSE}
+set.seed(123)
+# methods to assess inter cluster similarity
+m <- c( "average", "single", "complete", "ward")
+names(m) <- c( "average", "single", "complete", "ward")
+
+#distance measures
+dist_methods <- c("euclidean","manhattan","maximum", "canberra","minkowski")
+names(dist_methods)<- c("euclidean","manhattan","maximum", "canberra","minkowski")
+
+# function to compute coefficient
+final_dist_m<-list()
+final_m<-list()
+for(dist_m in dist_methods)
+{
+  dist_matrix<-dist(df_noCorr_scaled, method = dist_m)
+  for(x in m)
+  {
+    hc <-agnes(dist_matrix, method = x)
+    ac<-hc$ac
+    title<-sprintf("Distance: %s,Inter cluster Distance: %s, ac value: %f",dist_m,x,ac)
+    pltree(hc, cex = 0.6, hang = -1,main = title)
+    if(!is.nan(ac) && ac>0.95)
+    {
+      print(title)
+      final_dist_m<-c(final_dist_m,dist_m)
+      final_m<-c(final_m,x)
+    }
+  }
+}
+```
 ## Visualisation
 
 Creating a summary data frame for capturing population mean
@@ -265,11 +369,7 @@ varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom aft
 impfeat<-importance(data.rf)
 impfeatdf<-data.frame(impfeat)
 impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
-if(numClusters==2)
-  impfeatorder$X1<-impfeatorder$X2<-impfeatorder$MeanDecreaseGini<-NULL
-if(numClusters==4)
-  impfeatorder$X1<-impfeatorder$X2<-impfeatorder$X3<-impfeatorder$X4<-impfeatorder$MeanDecreaseGini<-NULL
-print(impfeatorder)
+impfeatorder[, "MeanDecreaseAccuracy", drop=FALSE]
 }
 ```
 

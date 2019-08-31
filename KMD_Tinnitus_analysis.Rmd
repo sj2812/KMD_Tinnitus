@@ -115,22 +115,13 @@ correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numer
 
 #cat("\ncorrelation with 90%:\n")
 matriz_cor <- cor(df_allF,method = "spearman")
+feat <- findCorrelation(matriz_cor,cutoff = 0.9,exact = TRUE)
 
-for (i in 1:nrow(matriz_cor)){
-  correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
-  matriz_cor[correlations,i] <- NA
-  
-  if(length(correlations)> 0){
-    #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
-    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations],coef=matriz_cor[i,correlations]))
-    rownames(correlated_coloumns) <- NULL
-  }
-}
 
 #No correlated columns
 
 #dropping the columns
-df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
+df_noCorr <- df_allF[,-c(feat)]
 
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
@@ -323,13 +314,20 @@ Many datasets contains inter-attribute correlations. Orclus is used to tackle th
 Proclus is based on K-mediods and uses three phase approach: initialization, iteration and cluster refinement. In the initialization step it selects random set of mediods which are farthest from each other. It uses Sampling to get data set and set of K mediods. These mediods are then in next phase iteratively selected to improve the clustering.  This is done by choosing average distance between points and the nearest mediod as the Cluster Quality measure. In refinement phase, based on the cluster formed new dimensions for each mediods are computed. Proclus can produce cluster with different number of selected dimensions as it tries to maintain the average dimensions per cluster given by the user.
 
 ```{r Proclus}
-set.seed(123)
+
 #For K = 2
 ProClus_clusters_k2<- ProClus(df_noCorr_scaled,k=2,d=20)
-# For K = 4
-set.seed(123)
-ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=20)
+#Getting each cluster elements
+k2_cluster1<-ProClus_clusters_k2[[1]]$objects
+k2_cluster2<-ProClus_clusters_k2[[2]]$objects
 
+# For K = 4
+ProClus_clusters_k4<- ProClus(df_noCorr_scaled,k=4,d=20)
+#Getting each cluster elements
+k4_cluster1<-ProClus_clusters_k4[[1]]$objects
+k4_cluster2<-ProClus_clusters_k4[[2]]$objects
+k4_cluster3<-ProClus_clusters_k4[[3]]$objects
+k4_cluster4<-ProClus_clusters_k4[[4]]$objects
 
 ```
 
@@ -556,19 +554,20 @@ ok2_labels <- orclus_res_k2$cluster
 cluster_plot_data<-getPlotData("Orclus",ok2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-createDT(ok2_labels,0)
+createDT(ok2_labels,removeNA)
 applyrf(ok2_labels,2,1500,10)
 
 # Proclus
 set.seed(123)
 removeNA <- 1
-  p2_labels<-c()
-  
-  for ( i in 1:num_clusters) {
-    for (j in ProClus_clusters_k2[[i]]$objects) {
-      p2_labels[j] <- i
-    }
-  }
+p2_labels<-c()
+for(i in k2_cluster1){
+  p2_labels[i] <- 1
+}
+for(i in k2_cluster2){
+
+  p2_labels[i]<- 2
+}
 cluster_plot_data<-getPlotData("Proclus",p2_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
@@ -645,13 +644,21 @@ applyrf(ok4_labels,2,1500,12)
 # Proclus
 set.seed(123)
 removeNA <- 1
-  p4_labels<-c()
-  
-  for ( i in 1:num_clusters) {
-    for (j in ProClus_clusters_k4[[i]]$objects) {
-      p4_labels[j] <- i
-    }
-  }
+p4_labels<-c()
+for(i in k4_cluster1){
+  p4_labels[i] <- 1
+}
+for(i in k4_cluster2){
+
+  p4_labels[i]<- 2
+}
+for(i in k4_cluster3){
+  p4_labels[i] <- 3
+}
+for(i in k4_cluster4){
+
+  p4_labels[i]<- 4
+}
 cluster_plot_data<-getPlotData("Proclus",p4_labels,num_clusters)
 r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
 r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
