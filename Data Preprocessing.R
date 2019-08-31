@@ -53,17 +53,31 @@ correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numer
 
 cat("\ncorrelation with 90%:\n")
 matriz_cor <- cor(df_allF,method = "spearman")
+#matriz_cor[lower.tri(matriz_cor)] <- 0
+
+#feat <- findCorrelation(matriz_cor,cutoff = 0.9,exact = TRUE)
+
 
 for (i in 1:nrow(matriz_cor)){
   correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
   matriz_cor[correlations,i] <- NA
-  
+
   if(length(correlations)> 0){
     #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
     correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations],coef=matriz_cor[i,correlations]))
     rownames(correlated_coloumns) <- NULL
   }
 }
+
+correlated_coloumns <- correlated_coloumns[order(-correlated_coloumns$coef),]
+
+features <- sqldf("SELECT distinct(F1) FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns")
+
+for (i in features) {
+  
+}
+
+
 
 ###################################### No correlated columns ####################################
 

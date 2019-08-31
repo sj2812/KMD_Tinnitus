@@ -29,9 +29,7 @@ library(factoextra) # clustering visualization
 library(dendextend) # for comparing two dendrograms
 library(r2d3)
 library(sqldf)
-library(caret)
 library(rpart.plot)
-library(e1071)
 library(randomForest)
 library(mlbench)
 library(caret)
@@ -171,8 +169,8 @@ cluster_features<-data.frame(df_allF_labeled%>%
 
 set.seed(123)
 removeNA <- 0 #Flag
-num_clusters <- 2
+num_clusters <- 4
 h2_labels<-cutree(hc,k=num_clusters)
 cluster_plot_data<-getPlotData("Hierarchical Clustering",h2_labels,num_clusters)
-r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
 ```
