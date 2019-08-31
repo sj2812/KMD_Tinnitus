@@ -18,14 +18,14 @@ var algo= data.filter(function(d,i) { if (i===1) {return d.algorithm;} });
 
 var y = d3.scaleLinear()
       .range([innerRadius, outerRadius])   // Domain will be define later.
-      .domain([0,1]); // Domain of Y is from 0 to the max seen in the data
+      .domain([0,1.5]); // Domain of Y is from 0 to the max seen in the data
       
 var scaley = d3.scaleLinear()
       .range([innerRadius-(outerRadius-innerRadius), outerRadius])   // Domain will be define later.
-      .domain([-1,1 ]); // Domain of Y is from 0 to the max seen in the data
+      .domain([-1.5,1.5 ]); // Domain of Y is from 0 to the max seen in the data
 var xAxis = d3.axisLeft()
       .scale(scaley)
-      .ticks(3);
+      .ticks(7);
       
 var tooltip = d3.select("body")
       .append("div")
@@ -72,7 +72,7 @@ svg=svg.append("g")
     .attr("class", "x axis")
     .call(xAxis);
 var circles = svg.selectAll("circle")
-          .data([-1,-0.5,0,0.5,1])
+          .data([-1.5,-1,-0.5,0,0.5,1,1.5])
           .enter().append("circle")
           .attr("r", function(d) {return scaley(d);})
           .style("fill", "none")
