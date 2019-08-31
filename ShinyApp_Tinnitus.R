@@ -81,6 +81,7 @@ createDT<-function(final_labels,remove_na)
 { 
   set.seed(123)
   
+  
   # labelling the records 
   df_allF_labeled<-df_allF%>%
     mutate(label = final_labels)
@@ -99,9 +100,7 @@ createDT<-function(final_labels,remove_na)
                      trControl=trctrl,
                      tuneLength = 10)
   
-  prp(dtree_fit$finalModel,extra = 2, box.palette = "Reds", tweak = 1.5,varlen
-      =-10, branch.type = 5)
-  #rpart.plot::rpart.plot(dtree_fit$finalModel, branch.type = 5, digits = 5, tweak = 1.9, fallen.leaves = FALSE)
+  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
 }
 
 ## Visualization
@@ -151,21 +150,30 @@ getPlotData <- function(algo_name,final_labels,no_of_clusters)
 }
 
 
-## Call from shiny
-dt <- function(approach,labels){
+## Create DT calling functions
+
+getkmeans<-function(n,removeNA){
+  kmclust <- kmeans(df_noCorr_scaled, n)
+  km_labels <- kmclust$cluster 
+  createDT(km_labels,removeNA)
   
-  if(approach=="proclus"){
-    createDT(labels,1)
-  }
-  else {
-    createDT(labels,0)
-  }
+}
+gethkmeans<-function(n,removeNA){
+  hkmclust <- hkmeans(df_noCorr_scaled, n)
+  hkm_labels <- hkmclust$cluster 
+  createDT(hkm_labels,removeNA)
+  
+}
+gethierarchical<-function(n,removeNA){
+  dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
+  hc <-agnes(dist_matrix, method = "ward")
+  h_labels<-cutree(hc,k=n)
+  createDT(h_labels,removeNA)
 }
 
-#getting labels of proclus
-getLabelproc<-function(n,avgdim){
+getproclus<-function(n,removeNA){
   set.seed(123)
-  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=avgdim)
+  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
   labels<-c()
   
   for ( i in 1:n) {
@@ -173,46 +181,121 @@ getLabelproc<-function(n,avgdim){
       labels[j] <- i
     }
   }
-  return(labels)
+  createDT(labels,1)
 }
-#getting labels of orclus
-getLabelorc<-function(n,findim,initclust){
-  set.seed(123)
-  library(orclus)
-  
-  orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = findim, k0 = initclust)
-  
-  ok_labels <- orclus_res_k$cluster
-  return(ok_labels)
+getpcakmeans<-function(n,removeNA){
+  km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
+  PC_num <- 18
+  df_PC <- km.pc$x[,1:PC_num]
+  kmclust <- kmeans(df_PC, n)
+  km_labels <- kmclust$cluster 
+  createDT(km_labels,removeNA)
 }
 
-#getting labels of selected approach other than proclus and orclus
-getLabel <- function(approach,n){
+getorclus<-function(n,removeNA){
+  set.seed(123)
+  library(orclus)
+  orclus_res_k <- orclus(df_noCorr_scaled,k = n,l = 25, k0 = 20)
+  ok_labels <- orclus_res_k$cluster
+  createDT(ok_labels,removeNA)
+  
+}
+
+## Radial Charts
+
+getkmeansradial<-function(n,removeNA){
+  kmclust <- kmeans(df_noCorr_scaled, n)
+  km_labels <- kmclust$cluster 
+  return(km_labels)
+}
+
+gethkmeansradial<-function(n,removeNA){
+  hkmclust <- hkmeans(df_noCorr_scaled, n)
+  hkm_labels <- hkmclust$cluster
+  return(hkm_labels)
+}
+gethierarchicalradial<-function(n,removeNA){
+  dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
+  hc <-agnes(dist_matrix, method = "ward")
+  h_labels<-cutree(hc,k=n)
+  
+  return(h_labels)
+}
+
+getorclusradial<-function(n,removeNA){
+  library(orclus)
+  set.seed(123)
+  orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)
+  ok_labels <- orclus_res_k$cluster
+  
+  return(ok_labels)
+}
+getproclusradial<-function(n,removeNA){
+  set.seed(123)
+  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
+  p_labels<-c()
+  
+  for ( i in 1:n) {
+    for (j in ProClus.clusters.k[[i]]$objects) {
+      p_labels[j] <- i
+    }
+  }
+  return(p_labels)
+}
+
+getpcakmeansradial<-function(n,removeNA){
+  
+  km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
+  PC_num <- 18
+  df_PC <- km.pc$x[,1:PC_num]
+  kmclust <- kmeans(df_PC, n)
+  km_labels <- kmclust$cluster 
+  return(km_labels) 
+}
+
+## Calling from shiny
+
+dt <- function(approach,numClust){
+  
   if(approach=="kmeans"){
-    set.seed(123)
-    kmclust <- kmeans(df_noCorr_scaled, n)
-    label <- kmclust$cluster 
-    
+    getkmeans(numClust,0)
   }
   else if(approach=="hkmeans"){
-     set.seed(123)
-     hkmclust <- hkmeans(df_noCorr_scaled, n)
-     label <-hkmclust$cluster
+    gethkmeans(numClust,0)
   }
   else if(approach=="hierarchical"){
-    set.seed(123)
-    dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
-    hc <-agnes(dist_matrix, method = "ward")
-    label <-cutree(hc,k=n)
-    
+    gethierarchical(numClust,0)
+  }
+  else if(approach=="orclus"){
+    library(orclus)
+    getorclus(numClust,0)
+  }
+  else if(approach=="proclus"){
+    getproclus(numClust,1)
   }
   else if(approach=="pca-kmeans"){
-    set.seed(123)
-    km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
-    PC_num <- 18
-    df_PC <- km.pc$x[,1:PC_num]
-    kmclust <- kmeans(df_PC, n)
-    label <- kmclust$cluster 
+    getpcakmeans(numClust,0)
+  }
+}
+
+radialchart <- function(approach,numClust){
+  if(approach=="kmeans"){
+    label <- getkmeansradial(numClust)
+  }
+  else if(approach=="hkmeans"){
+    label <- gethkmeansradial(numClust)
+  }
+  else if(approach=="hierarchical"){
+    label <- gethierarchicalradial(numClust)
+  }
+  else if(approach=="orclus"){
+    label <- getorclusradial(numClust)
+  }
+  else if(approach=="proclus"){
+    label <- getproclusradial(numClust)
+  }
+  else if(approach=="pca-kmeans"){
+    label <- getpcakmeansradial(numClust)
   }
   return(label)
 }
@@ -232,12 +315,7 @@ ui<-fluidPage(
                   c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
       
       numericInput("numClust","Select number of clusters",min =2,max = 10,value = 2),
-      conditionalPanel(
-        condition="input.Algorithm == 'orclus'",numericInput("findim","Final subspace dimensionality",25,2,72),numericInput("initclust","Initial no. of clusters",20,numClust+1,100)
-      ),
-      conditionalPanel(
-        condition="input.Algorithm == 'proclus'",numericInput("avgdim","Average dimensionality",3,3,72)
-      ),
+      
       fluidRow(column(2, verbatimTextOutput("value")))
     ),
     mainPanel( 
@@ -276,6 +354,7 @@ ui<-fluidPage(
       )))
 )
 server<-function(input,output){
+
   condition<-reactive(input$Algorithm)
   viewsel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
                     else paste("The decision tree for", input$Algorithm,"with number of cluster",input$numClust))
@@ -283,10 +362,9 @@ server<-function(input,output){
   sel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
                 else paste("The radial chart for", input$Algorithm,"with number of clusters",input$numClust))
   
-  label <- reactive(if(condition()!="none") {switch(input$Algorithm, "proclus"=getLabelproc(input$numClust,input$avgdim),"orclus"=getLabelorc(input$numClust,input$findim,input$initclust),
-                                                    getLabel(input$Algorithm,input$numClust) )
-  })
-  DT<-reactive(if(condition()!="none" ) dt(input$Algorithm,label()))
+  
+  DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
+  label <- reactive(if(condition()!="none") radialchart(input$Algorithm,input$numClust))
   cluster_plot_data <- reactive(if(condition()!="none") getPlotData(input$Algorithm,label(),input$numClust))
   
   output$Dt<-renderPlot({DT()})
