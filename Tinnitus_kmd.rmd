@@ -1,11 +1,14 @@
 ---
-title: "pre-final"
+title: "Tinnitus_kmd"
 author: "Abhilash, Kritika, Priyanka, Shivani"
-date: "19 August 2019"
+date: "25/08/2019"
 output: html_document
+params:
+  k: 2
 ---
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = (params$k>1 && params$k<11))
 ```
 
 ## Motivation
@@ -134,7 +137,36 @@ df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
 
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
+numClust<-params$k
 ```
+```{r}
+createDT<-function(final_labels,remove_na)
+{ 
+  set.seed(123)
+  
+  
+  # labelling the records 
+  df_allF_labeled<-df_allF%>%
+    mutate(label = final_labels)
+  df_string_labeled<-df_allF_labeled
+  
+  #Adding "Type" to each cluster number to make it non numeric
+  df_string_labeled$label<-sub("^","Type ",df_allF_labeled$label)
+  if(remove_na)
+  {
+    df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+  }
+  
+  trctrl <- trainControl(method = "boot", number = 10)
+  dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
+                     parms = list(split = "information"),
+                     trControl=trctrl,
+                     tuneLength = 10)
+  
+  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+}
+```
+<<<<<<< HEAD
 ## Elbow Method
 Elbow method for getting optimal value of k. The idea behind elbow method is to to define number of clusters such that the total within-cluster sum of square (WSS) is minimized. The value of chosen k is such that adding another cluster does not affect the overall wss much.
 ```{r Elbow Method}
@@ -242,17 +274,13 @@ for(dist_m in dist_methods)
 ## Visualisation
 
 Creating a summary data frame for capturing population mean
+=======
+>>>>>>> 9b740ee01c27a96090aaf32ca285a0c8c9ec4a23
 ```{r}
 feature_summary_scaled<-data.frame(df_allF_scaled%>%
                                      summarise_each(mean))
 feature_summary<-data.frame(df_allF%>%
                               summarise_each(mean))
-```
-For visualisation of clustering results we choose a radial chart.
-To generate this radial chart we need format the data in a data structure suitable for plotting.
-The bar height is the scaled value of the features of a cluster. The tooltip gives extra information about the actual feature value and the population mean for the feature.
-```{r Visualisation}
-#Finally creating a data frame which can be used for the visualization
 options(scipen = 999)
 createPlotData<-function(algo_name,clus_name,cluster_scaled,cluster)
  { cluster_plot_data<-rbind(colnames(cluster[-1]),cluster_scaled[-1],feature_summary,cluster[-1])
@@ -285,76 +313,11 @@ cluster_features<-data.frame(df_allF_labeled%>%
   return(plotData)
 }
 
-```
-## Decision Tree
+    
+    
 
-Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
-Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
 
-Now to get the decision tree as a classifier intead of a regressor we need to make the predicting variable as non numeric.
-```{r}
-createDT<-function(final_labels,remove_na)
-{ 
-  set.seed(123)
-  
-  
-  # labelling the records 
-  df_allF_labeled<-df_allF%>%
-    mutate(label = final_labels)
-  df_string_labeled<-df_allF_labeled
-  
-  #Adding "Type" to each cluster number to make it non numeric
-  df_string_labeled$label<-sub("^","Type ",df_allF_labeled$label)
-  if(remove_na)
-  {
-    df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
-  }
-  
-  trctrl <- trainControl(method = "boot", number = 10)
-  dtree_fit <- train(label ~., data = df_string_labeled, method = "rpart",
-                     parms = list(split = "information"),
-                     trControl=trctrl,
-                     tuneLength = 10)
-  
-  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
-}
-```
-## Random Forest
-
-Supervised phase to obtain the important features using random forest. This chunk  does the parameter tuning and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
-We then apply random forest with the best paramters. 
-The features are then ordered as per their mean decrease accuracy.
-```{r RF}
-set.seed(123)
-##Tune random forest
-tuneRandomForest<-function(labels){
-# labelling the records 
-data<-df_allF%>%
-  mutate(label = labels)
-data$label<- as.factor(data$label)
-x <- data[,1:77]
-y <- data[,78]
-#tuning of rf
-customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
-customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
-customRF$grid <- function(x, y, len = NULL, search = "grid") {}
-customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs, ...) {
-  randomForest(x, y, mtry = param$mtry, ntree=param$ntree, ...)
-}
-customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
-  predict(modelFit, newdata)
-customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
-  predict(modelFit, newdata, type = "prob")
-# train model
-control <- trainControl(method="repeatedcv", number=5, repeats=2)
-tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
-set.seed(123)
-custom <- train(label~., data=data, method=customRF,  tuneGrid=tunegrid, trControl=control)
-#summary(custom)
-plot(custom)
-print(custom)
-}
-
+<<<<<<< HEAD
 ##applying random forest
 applyrf<-function(labels,numClusters,ntree,mtry){
 # labelling the records 
@@ -371,38 +334,52 @@ impfeatdf<-data.frame(impfeat)
 impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
 impfeatorder[, "MeanDecreaseAccuracy", drop=FALSE]
 }
+=======
+>>>>>>> 9b740ee01c27a96090aaf32ca285a0c8c9ec4a23
 ```
-
-
-## Fetching labels Performing Radial Chart Visualisation and Decision Tree for selected Cluster numbers
-First the Labels are fetched for each clustering algorithm, which is then passed into the initVis function alongwith the cluster number to create Radial Chart visualisations. Decision tree function is then called to visualize the decision points that can be used by the user to ask the relevant questions to come to a sub-group of Tinnitus.
-
 ```{r}
-getKmeanslabels<-function(numClust){
+
   kmclust <- kmeans(df_noCorr_scaled, numClust)
   km_labels <- kmclust$cluster 
-  return(list("labels"=km_labels,"numClust"=numClust,"removeNA"=0))
-}
-   
+  cluster_plot_data<-getPlotData("Kmeans",km_labels,numClust)
+  createDT(km_labels,0)
+  
+  r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+``` 
+```{r,echo=(numClust==3)}
+  r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+```
+```{r}
 
-gethKmeanslabels<-function(numClust){
+
   hkmclust <- hkmeans(df_noCorr_scaled, numClust)
   hkm_labels <- hkmclust$cluster 
-  return(list("labels"=hkm_labels,"numClust"=numClust,"removeNA"=0))
-}
-   
-   
-gethierarchicallabels<-function(numClust){
+  cluster_plot_data<-getPlotData("Hk-means",hkm_labels,numClust)
+  createDT(hkm_labels,0)
+  r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+```
+```{r,echo=(numClust==3)}
+  r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+```
+```{r}
+
   dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
   hc <-agnes(dist_matrix, method = "ward")
   h_labels<-cutree(hc,k=numClust)
-  return(list("labels"=h_labels,"numClust"=numClust,"removeNA"=0))
-}
-   
+  cluster_plot_data<-getPlotData("Hierarchical",h_labels,numClust)
+  createDT(h_labels,0)
+  r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+```
+```{r,echo=(numClust==3)}
+  r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+```
+```{r}
 
-getprocluslabels<-function(numClust){
+  set.seed(123)
   ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=numClust,d=70)
-  
   labels<-c()
   
   for ( i in 1:numClust) {
@@ -410,220 +387,43 @@ getprocluslabels<-function(numClust){
       labels[j] <- i
     }
   }
-  return(list("labels"=labels,"numClust"=numClust,"removeNA"=1))
-}
-   
-   
- getorcluslabels<-function(numClust){
-  library(orclus)
-  orclus_res_k <- orclus(df_noCorr_scaled,k = numClust,l = 25, k0 = 20)
-  ok_labels <- orclus_res_k$cluster
-  return(list("labels"=ok_labels,"numClust"=numClust,"removeNA"=0))
-}
-   
-
-getpcakmeanslabels<-function(numClust){
+  cluster_plot_data<-getPlotData("Proclus",labels,numClust)
+  createDT(labels,1)
+  
+  r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+```
+```{r,echo=(numClust==3)}
+  r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
+```
+```{r}
   km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
   PC_num <- 18
   df_PC <- km.pc$x[,1:PC_num]
   pckmclust <- kmeans(df_PC, numClust)
   pckm_labels <- pckmclust$cluster 
-  return(list("labels"=pckm_labels,"numClust"=numClust,"removeNA"=0))
-}
+  cluster_plot_data<-getPlotData("PCA K-means",pckm_labels,numClust)
+  createDT(pckm_labels,0)
+  r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 ```
-## User configuration
-This chunk can be used for Configuration of different approaches. Function calls to get the cluster assignment of the approches.
-```{r} 
-  kmeansres<-getKmeanslabels(6)
-  hierarchicalres<-gethierarchicallabels(6)
-  hkmeansres<-gethKmeanslabels(4)
-  proclusres<-getprocluslabels(5)
-  orclusres<-getorcluslabels(4)
-  pckmres<-getpcakmeanslabels(2)
+```{r,echo=(numClust==3)}
+  r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 ```
-
-All the results can be seen after running this chunk
 ```{r}
-#kmeans
-   cluster_plot_data<-getPlotData("Kmeans",kmeansres$labels,kmeansres$numClust)
-   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 
-   if(kmeansres$numClust>2)
-   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-   if(kmeansres$numClust>3)
-   r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-   if(kmeansres$numClust>4)
-   r2d3(data = cluster_plot_data[[5]], script = "cluster_chart.js",viewer ="internal")
-   if(kmeansres$numClust>5)
-   r2d3(data = cluster_plot_data[[6]], script = "cluster_chart.js",viewer ="internal")
-   if(kmeansres$numClust>6)
-   r2d3(data = cluster_plot_data[[7]], script = "cluster_chart.js",viewer ="internal")
-   if(kmeansres$numClust>7)
-   r2d3(data = cluster_plot_data[[8]], script = "cluster_chart.js",viewer ="internal")
-   if(kmeansres$numClust>8)
-   r2d3(data = cluster_plot_data[[9]], script = "cluster_chart.js",viewer ="internal")
-   if(kmeansres$numClust>9)
-   r2d3(data = cluster_plot_data[[10]], script = "cluster_chart.js",viewer ="internal")
-  createDT(kmeansres$labels,0)
-  
-  #hierarchical
-  cluster_plot_data<-getPlotData("hierarchical",hierarchicalres$labels,hierarchicalres$numClust)
-   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+  set.seed(123)
+  library(orclus)
+  orclus_res_k <- orclus(df_noCorr_scaled,k = numClust,l = 25, k0 = 20)
+  ok_labels <- orclus_res_k$cluster
+  cluster_plot_data<-getPlotData("Orclus",ok_labels,numClust)
+  createDT(ok_labels,0)
+  r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
+  r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 
-   if(hierarchicalres$numClust>2)
-   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-   if(hierarchicalres$numClust>3)
-   r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-   if(hierarchicalres$numClust>4)
-   r2d3(data = cluster_plot_data[[5]], script = "cluster_chart.js",viewer ="internal")
-   if(hierarchicalres$numClust>5)
-   r2d3(data = cluster_plot_data[[6]], script = "cluster_chart.js",viewer ="internal")
-   if(hierarchicalres$numClust>6)
-   r2d3(data = cluster_plot_data[[7]], script = "cluster_chart.js",viewer ="internal")
-   if(hierarchicalres$numClust>7)
-   r2d3(data = cluster_plot_data[[8]], script = "cluster_chart.js",viewer ="internal")
-   if(hierarchicalres$numClust>8)
-   r2d3(data = cluster_plot_data[[9]], script = "cluster_chart.js",viewer ="internal")
-   if(hierarchicalres$numClust>9)
-   r2d3(data = cluster_plot_data[[10]], script = "cluster_chart.js",viewer ="internal")
-  createDT(hierarchicalres$labels,0)
-  
-  #hkmeans
-  cluster_plot_data<-getPlotData("hKmeans",hkmeansres$labels,hkmeansres$numClust)
-   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-
-   if(hkmeansres$numClust>2)
-   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-   if(hkmeansres$numClust>3)
-   r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-   if(hkmeansres$numClust>4)
-   r2d3(data = cluster_plot_data[[5]], script = "cluster_chart.js",viewer ="internal")
-   if(hkmeansres$numClust>5)
-   r2d3(data = cluster_plot_data[[6]], script = "cluster_chart.js",viewer ="internal")
-   if(hkmeansres$numClust>6)
-   r2d3(data = cluster_plot_data[[7]], script = "cluster_chart.js",viewer ="internal")
-   if(hkmeansres$numClust>7)
-   r2d3(data = cluster_plot_data[[8]], script = "cluster_chart.js",viewer ="internal")
-   if(hkmeansres$numClust>8)
-   r2d3(data = cluster_plot_data[[9]], script = "cluster_chart.js",viewer ="internal")
-   if(hkmeansres$numClust>9)
-   r2d3(data = cluster_plot_data[[10]], script = "cluster_chart.js",viewer ="internal")
-  createDT(hkmeansres$labels,0)
-  
-  #proclus
-  cluster_plot_data<-getPlotData("proclus",proclusres$labels,proclusres$numClust)
-   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-
-   if(proclusres$numClust>2)
-   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-   if(proclusres$numClust>3)
-   r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-   if(proclusres$numClust>4)
-   r2d3(data = cluster_plot_data[[5]], script = "cluster_chart.js",viewer ="internal")
-   if(proclusres$numClust>5)
-   r2d3(data = cluster_plot_data[[6]], script = "cluster_chart.js",viewer ="internal")
-   if(proclusres$numClust>6)
-   r2d3(data = cluster_plot_data[[7]], script = "cluster_chart.js",viewer ="internal")
-   if(proclusres$numClust>7)
-   r2d3(data = cluster_plot_data[[8]], script = "cluster_chart.js",viewer ="internal")
-   if(proclusres$numClust>8)
-   r2d3(data = cluster_plot_data[[9]], script = "cluster_chart.js",viewer ="internal")
-   if(proclusres$numClust>9)
-   r2d3(data = cluster_plot_data[[10]], script = "cluster_chart.js",viewer ="internal")
-  createDT(proclusres$labels,1)
-  
-  #orclus
-  cluster_plot_data<-getPlotData("orclus",orclusres$labels,orclusres$numClust)
-   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-
-   if(orclusres$numClust>2)
-   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-   if(orclusres$numClust>3)
-   r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-   if(orclusres$numClust>4)
-   r2d3(data = cluster_plot_data[[5]], script = "cluster_chart.js",viewer ="internal")
-   if(orclusres$numClust>5)
-   r2d3(data = cluster_plot_data[[6]], script = "cluster_chart.js",viewer ="internal")
-   if(orclusres$numClust>6)
-   r2d3(data = cluster_plot_data[[7]], script = "cluster_chart.js",viewer ="internal")
-   if(orclusres$numClust>7)
-   r2d3(data = cluster_plot_data[[8]], script = "cluster_chart.js",viewer ="internal")
-   if(orclusres$numClust>8)
-   r2d3(data = cluster_plot_data[[9]], script = "cluster_chart.js",viewer ="internal")
-   if(orclusres$numClust>9)
-   r2d3(data = cluster_plot_data[[10]], script = "cluster_chart.js",viewer ="internal")
-  createDT(orclusres$labels,0)
-  
-  #pcakmeans
-  cluster_plot_data<-getPlotData("pca-Kmeans",pckmres$labels,pckmres$numClust)
-   r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-   r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-
-   if(pckmres$numClust>2)
-   r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-   if(pckmres$numClust>3)
-   r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
-   if(pckmres$numClust>4)
-   r2d3(data = cluster_plot_data[[5]], script = "cluster_chart.js",viewer ="internal")
-   if(pckmres$numClust>5)
-   r2d3(data = cluster_plot_data[[6]], script = "cluster_chart.js",viewer ="internal")
-   if(pckmres$numClust>6)
-   r2d3(data = cluster_plot_data[[7]], script = "cluster_chart.js",viewer ="internal")
-   if(pckmres$numClust>7)
-   r2d3(data = cluster_plot_data[[8]], script = "cluster_chart.js",viewer ="internal")
-   if(pckmres$numClust>8)
-   r2d3(data = cluster_plot_data[[9]], script = "cluster_chart.js",viewer ="internal")
-   if(pckmres$numClust>9)
-   r2d3(data = cluster_plot_data[[10]], script = "cluster_chart.js",viewer ="internal")
-  createDT(pckmres$labels,0)
 ```
-## Note: 
-To be run after creating labels below. Used for building Random Forest to validate the decision trees along with the tuning of parameters of random forest.
-
-```{r RF Tune}
-##function call
- # tuneRandomForest(kmeansres$labels)
- # tuneRandomForest(hkmeansres$labels)
- # tuneRandomForest(hierarchicalres$labels)
- # tuneRandomForest(proclusres$labels)
- # tuneRandomForest(orclusres$labels)
- # tuneRandomForest(pckmres$labels)
-
- applyrf(kmeansres$labels,2,1000,5)
- applyrf(hierarchicalres$labels,2,1500,6)
- applyrf(hkmeansres$labels,2,1500,5)
- applyrf(orclusres$labels,2,1500,10)
- #applyrf(proclusres$labels,2,1000,5) 
- applyrf(pckmres$labels,2,1000,5)
+```{r,echo=(numClust==3)}
+ r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
 ```
 
-## Evaluation :
-* Dunn Index: It is the ratio of minimum of this pairwise distance as the inter-cluster separation (min.separation) to the maximal intra-cluster distance (i.e maximum diameter) as the intra-cluster compactness.If the data set contains compact and well-separated clusters, the diameter of the clusters is expected to be small and the distance between the clusters is expected to be large. Thus, Dunn index should be maximized.
-* Connectivity: corresponds to what extent items are placed in the same cluster as their nearest neighbors in the data space. The connectivity has a value between 0 and infinity and should be minimized.
-* Compactness or cluster cohesion: Measures how close are the objects within the same cluster. A lower within-cluster variation is an indicator of a good compactness (i.e.a good clustering). Smaller values indicate a better clustering structure.
-```{r Evaluation, echo=FALSE}
-evaluate<-function(labels,numclusters,approach){
-  
-  result_set<-vector("list", 5)
-  result_set[1]<-approach
-  result_set[2]<-numclusters
-  result_set[3]<-dunn(clusters = labels, Data=df_allF_scaled)
-  result_set[4]<-connectivity(distance = NULL, labels, Data = df_allF_scaled, neighbSize = 10, method = "euclidean")
-  result_set[5]<-compactness(df_allF_scaled, labels)
-  return(result_set)
-}
 
-eval_table <- matrix(, nrow = 1, ncol = 5)
-colnames(eval_table)<-c("Approach","Number of clusters","Dunn","Connectivity","Compactness")
-eval_table<-rbind(eval_table,evaluate(kmeansres$labels,kmeansres$numClust,"kmeans"))
-eval_table<-rbind(eval_table,evaluate(hierarchicalres$labels,hierarchicalres$numClust,"hierarchical"))
-eval_table<-rbind(eval_table,evaluate(hkmeansres$labels,hkmeansres$numClust,"hkmeans"))
-eval_table<-rbind(eval_table,evaluate(pckmres$labels,pckmres$numClust,"pca-kmeans"))
-eval_table<-eval_table[-1,]
-eval_table
-```
