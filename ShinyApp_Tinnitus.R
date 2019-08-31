@@ -233,7 +233,7 @@ ui<-fluidPage(
       
       numericInput("numClust","Select number of clusters",min =2,max = 10,value = 2),
       conditionalPanel(
-        condition="input.Algorithm == 'orclus'",numericInput("findim","Final subspace dimensionality",25,2,72),numericInput("initclust","Initial no. of clusters",20,numClust+1,100)
+        condition="input.Algorithm == 'orclus'",numericInput("findim","Final subspace dimensionality",25,2,72),numericInput("initclust","Initial no. of clusters",20,"input.numClust+1",100)
       ),
       conditionalPanel(
         condition="input.Algorithm == 'proclus'",numericInput("avgdim","Average dimensionality",3,3,72)
