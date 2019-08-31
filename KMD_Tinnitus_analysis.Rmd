@@ -337,7 +337,6 @@ k4_cluster1<-ProClus_clusters_k4[[1]]$objects
 k4_cluster2<-ProClus_clusters_k4[[2]]$objects
 k4_cluster3<-ProClus_clusters_k4[[3]]$objects
 k4_cluster4<-ProClus_clusters_k4[[4]]$objects
-
 ```
 
 
@@ -388,6 +387,33 @@ cluster_features<-data.frame(df_allF_labeled%>%
     plotData[[i]]<-createPlotData(algo_name,clus_name,cluster_features_scaled[i,],cluster_features[i,])
   }
   return(plotData)
+}
+
+getProclusPlotData<- function(algo_name,proclus_cluster,indices,cluster_num)
+{
+ # labelling the records 
+  df_noCorr_labeled<-df_noCorr[indices,which(proclus_cluster[[cluster_num]][["subspace"]] == TRUE)]%>%
+  mutate(label = cluster_num)
+df_noCorr_scaled_labeled<-df_noCorr_scaled[indices,which(proclus_cluster[[cluster_num]][["subspace"]] == TRUE)]%>%
+  mutate(label = cluster_num)
+
+# creating cluster feature vectors from obtained labels
+
+cluster_feature_scaled<-data.frame(df_noCorr_scaled_labeled%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+cluster_feature<-data.frame(df_noCorr_labeled%>%
+                               group_by(label)%>%
+                               summarise_each(mean))
+p_feature_summary<-data.frame(df_noCorr%>%
+                              summarise_each(mean))
+p_feature_summary<-p_feature_summary[,which(proclus_cluster[[cluster_num]][["subspace"]] == TRUE)]
+  plotData<-list()
+  clus_name<-paste("Type ",cluster_num)
+  cluster_plot_data<-rbind(colnames(cluster_feature[-1]),cluster_feature_scaled[-1],p_feature_summary,cluster_feature[-1])
+  rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()%>%mutate(algorithm=algo_name,cluster_name=clus_name)
+  return(cluster_plot_data)
 }
 ```
 ## Decision Tree
@@ -577,9 +603,10 @@ for(i in k2_cluster2){
 
   p2_labels[i]<- 2
 }
-cluster_plot_data<-getPlotData("Proclus",p2_labels,num_clusters)
-r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
+#cluster_plot_data<-getPlotData("Proclus",p2_labels,num_clusters)
+
+r2d3(data = getProclusPlotData("Proclus",ProClus_clusters_k2,k2_cluster1,1), script = "cluster_chart.js",viewer ="internal")
+r2d3(data = getProclusPlotData("Proclus",ProClus_clusters_k2,k2_cluster2,2), script = "cluster_chart.js",viewer ="internal")
 createDT(p2_labels,removeNA)
 #applyrf(p2_labels,2,1000,5) 
 
@@ -668,11 +695,11 @@ for(i in k4_cluster4){
 
   p4_labels[i]<- 4
 }
-cluster_plot_data<-getPlotData("Proclus",p4_labels,num_clusters)
-r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
-r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
-r2d3(data = cluster_plot_data[[3]], script = "cluster_chart.js",viewer ="internal")
-r2d3(data = cluster_plot_data[[4]], script = "cluster_chart.js",viewer ="internal")
+#cluster_plot_data<-getPlotData("Proclus",p4_labels,num_clusters)
+r2d3(data = getProclusPlotData("Proclus",ProClus_clusters_k4,k4_cluster1,1), script = "cluster_chart.js",viewer ="internal")
+r2d3(data = getProclusPlotData("Proclus",ProClus_clusters_k4,k4_cluster2,2), script = "cluster_chart.js",viewer ="internal")
+r2d3(data = getProclusPlotData("Proclus",ProClus_clusters_k4,k4_cluster3,3), script = "cluster_chart.js",viewer ="internal")
+r2d3(data = getProclusPlotData("Proclus",ProClus_clusters_k4,k4_cluster4,4), script = "cluster_chart.js",viewer ="internal")
 createDT(p4_labels,removeNA)
 #applyrf(p4_labels,2,1000,12)
 
