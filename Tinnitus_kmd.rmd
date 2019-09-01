@@ -414,8 +414,8 @@ tuneRandomForest<-function(labels){
 data<-df_allF%>%
   mutate(label = labels)
 data$label<- as.factor(data$label)
-x <- data[,1:77]
-y <- data[,78]
+x <- df_allF
+y <- data$label
 #tuning of rf
 customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
 customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
@@ -438,12 +438,20 @@ print(custom)
 }
 
 ##applying random forest
-applyrf<-function(labels,numClusters,ntree,mtry){
+applyrf<-function(labels,numClusters,ntree,mtry,remove_na){
 # labelling the records 
-data<-df_allF%>%
+  df_allF_labeled<-df_allF%>%
   mutate(label = labels)
-data$label<- as.factor(data$label)
-data.rf <- randomForest(formula= label ~ ., data=data, importance=TRUE,ntree=ntree,mtry=mtry,
+  df_string_labeled<-df_allF_labeled
+  df_string_labeled$label<-as.factor(df_string_labeled$label)
+  #Adding "Type" to each cluster number to make it non numeric
+  
+  if(remove_na)
+  {
+    df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))),]
+  }
+
+data.rf <- randomForest(formula= label ~ ., data=df_string_labeled, importance=TRUE,ntree=ntree,mtry=mtry,
                         proximity=TRUE)
 print(data.rf)
 plot(data.rf)
@@ -689,12 +697,12 @@ To be run after creating labels below. Used for building Random Forest to valida
  # tuneRandomForest(orclusres$labels)
  # tuneRandomForest(pckmres$labels)
 
- applyrf(kmeansres$labels,2,1000,5)
- applyrf(hierarchicalres$labels,2,1500,6)
- applyrf(hkmeansres$labels,2,1500,5)
- applyrf(orclusres$labels,2,1500,10)
- #applyrf(proclusres$labels,2,1000,5) 
- applyrf(pckmres$labels,2,1000,5)
+ applyrf(kmeansres$labels,2,1000,5,0)
+ applyrf(hierarchicalres$labels,2,1500,6,0)
+ applyrf(hkmeansres$labels,2,1500,5,0)
+ applyrf(orclusres$labels,2,1500,10,0)
+ applyrf(proclusres$labels,2,1000,5,1) 
+ applyrf(pckmres$labels,2,1000,5,0)
 ```
 
 ## Evaluation :
