@@ -81,7 +81,6 @@ createDT<-function(final_labels,remove_na)
 { 
   set.seed(123)
   
-  
   # labelling the records 
   df_allF_labeled<-df_allF%>%
     mutate(label = final_labels)
@@ -100,7 +99,9 @@ createDT<-function(final_labels,remove_na)
                      trControl=trctrl,
                      tuneLength = 10)
   
-  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+  prp(dtree_fit$finalModel,extra = 2, box.palette = "Reds", tweak = 1.5,varlen
+      =-10, branch.type = 5)
+  #rpart.plot::rpart.plot(dtree_fit$finalModel, branch.type = 5, digits = 5, tweak = 1.9, fallen.leaves = FALSE)
 }
 
 ## Visualization
@@ -148,32 +149,48 @@ getPlotData <- function(algo_name,final_labels,no_of_clusters)
   }
   return(plotData)
 }
-
-
-## Create DT calling functions
-
-getkmeans<-function(n,removeNA){
-  kmclust <- kmeans(df_noCorr_scaled, n)
-  km_labels <- kmclust$cluster 
-  createDT(km_labels,removeNA)
+getProclusPlotData<- function(algo_name,proclus_cluster,cluster_num)
+{
+  # labelling the records 
+  df_noCorr_labeled<-df_noCorr[proclus_cluster[[cluster_num]]$objects,which(proclus_cluster[[cluster_num]][["subspace"]] == TRUE)]%>%
+    mutate(label = cluster_num)
+  df_noCorr_scaled_labeled<-df_noCorr_scaled[proclus_cluster[[cluster_num]]$objects,which(proclus_cluster[[cluster_num]][["subspace"]] == TRUE)]%>%
+    mutate(label = cluster_num)
   
-}
-gethkmeans<-function(n,removeNA){
-  hkmclust <- hkmeans(df_noCorr_scaled, n)
-  hkm_labels <- hkmclust$cluster 
-  createDT(hkm_labels,removeNA)
+  # creating cluster feature vectors from obtained labels
   
-}
-gethierarchical<-function(n,removeNA){
-  dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
-  hc <-agnes(dist_matrix, method = "ward")
-  h_labels<-cutree(hc,k=n)
-  createDT(h_labels,removeNA)
+  cluster_feature_scaled<-data.frame(df_noCorr_scaled_labeled%>%
+                                       group_by(label)%>%
+                                       summarise_each(mean))
+  cluster_feature<-data.frame(df_noCorr_labeled%>%
+                                group_by(label)%>%
+                                summarise_each(mean))
+  p_feature_summary<-data.frame(df_noCorr%>%
+                                  summarise_each(mean))
+  p_feature_summary<-p_feature_summary[,which(proclus_cluster[[cluster_num]][["subspace"]] == TRUE)]
+  plotData<-list()
+  clus_name<-paste("Type ",cluster_num)
+  cluster_plot_data<-rbind(colnames(cluster_feature[-1]),cluster_feature_scaled[-1],p_feature_summary,cluster_feature[-1])
+  rownames(cluster_plot_data)<-c("feature","scaled_cluster_feature_value","population_mean","cluster_feature_value")
+  cluster_plot_data<-t(cluster_plot_data)%>%data.frame()%>%mutate(algorithm=algo_name,cluster_name=clus_name)
+  return(cluster_plot_data)
 }
 
-getproclus<-function(n,removeNA){
+## Call from shiny
+dt <- function(approach,labels){
+  
+  if(approach=="proclus"){
+    createDT(labels,1)
+  }
+  else {
+    createDT(labels,0)
+  }
+}
+
+#getting labels of proclus
+getLabelproc<-function(n,avgdim){
   set.seed(123)
-  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
+  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=avgdim)
   labels<-c()
   
   for ( i in 1:n) {
@@ -181,129 +198,48 @@ getproclus<-function(n,removeNA){
       labels[j] <- i
     }
   }
-  createDT(labels,1)
+  return(list("label"=labels,"objradial"=ProClus.clusters.k))
 }
-getpcakmeans<-function(n,removeNA){
-  km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
-  PC_num <- 18
-  df_PC <- km.pc$x[,1:PC_num]
-  kmclust <- kmeans(df_PC, n)
-  km_labels <- kmclust$cluster 
-  createDT(km_labels,removeNA)
-}
-
-getorclus<-function(n,removeNA){
+#getting labels of orclus
+getLabelorc<-function(n,findim,initclust){
   set.seed(123)
   library(orclus)
-  orclus_res_k <- orclus(df_noCorr_scaled,k = n,l = 25, k0 = 20)
+  
+  orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = findim, k0 = initclust)
+  
   ok_labels <- orclus_res_k$cluster
-  createDT(ok_labels,removeNA)
-  
+  return(list("label"=ok_labels))
 }
 
-## Radial Charts
-
-getkmeansradial<-function(n,removeNA){
-  kmclust <- kmeans(df_noCorr_scaled, n)
-  km_labels <- kmclust$cluster 
-  return(km_labels)
-}
-
-gethkmeansradial<-function(n,removeNA){
-  hkmclust <- hkmeans(df_noCorr_scaled, n)
-  hkm_labels <- hkmclust$cluster
-  return(hkm_labels)
-}
-gethierarchicalradial<-function(n,removeNA){
-  dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
-  hc <-agnes(dist_matrix, method = "ward")
-  h_labels<-cutree(hc,k=n)
-  
-  return(h_labels)
-}
-
-getorclusradial<-function(n,removeNA){
-  library(orclus)
-  set.seed(123)
-  orclus_res_k <- orclus(df_noCorr_scaled,k=n,l = 25, k0 = 20)
-  ok_labels <- orclus_res_k$cluster
-  
-  return(ok_labels)
-}
-getproclusradial<-function(n,removeNA){
-  set.seed(123)
-  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=n,d=70)
-  p_labels<-c()
-  
-  for ( i in 1:n) {
-    for (j in ProClus.clusters.k[[i]]$objects) {
-      p_labels[j] <- i
-    }
-  }
-  return(p_labels)
-}
-
-getpcakmeansradial<-function(n,removeNA){
-  
-  km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
-  PC_num <- 18
-  df_PC <- km.pc$x[,1:PC_num]
-  kmclust <- kmeans(df_PC, n)
-  km_labels <- kmclust$cluster 
-  return(km_labels) 
-}
-
-## Calling from shiny
-
-dt <- function(approach,numClust){
-  
+#getting labels of selected approach other than proclus and orclus
+getLabel <- function(approach,n){
   if(approach=="kmeans"){
-    getkmeans(numClust,0)
+    set.seed(123)
+    kmclust <- kmeans(df_noCorr_scaled, n)
+    label <- kmclust$cluster 
+    
   }
   else if(approach=="hkmeans"){
-<<<<<<< HEAD
     set.seed(123)
     hkmclust <- hkmeans(df_noCorr_scaled, n)
     label <-hkmclust$cluster
-=======
-    gethkmeans(numClust,0)
->>>>>>> 9b740ee01c27a96090aaf32ca285a0c8c9ec4a23
   }
   else if(approach=="hierarchical"){
-    gethierarchical(numClust,0)
-  }
-  else if(approach=="orclus"){
-    library(orclus)
-    getorclus(numClust,0)
-  }
-  else if(approach=="proclus"){
-    getproclus(numClust,1)
+    set.seed(123)
+    dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
+    hc <-agnes(dist_matrix, method = "ward")
+    label <-cutree(hc,k=n)
+    
   }
   else if(approach=="pca-kmeans"){
-    getpcakmeans(numClust,0)
+    set.seed(123)
+    km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
+    PC_num <- 18
+    df_PC <- km.pc$x[,1:PC_num]
+    kmclust <- kmeans(df_PC, n)
+    label <- kmclust$cluster 
   }
-}
-
-radialchart <- function(approach,numClust){
-  if(approach=="kmeans"){
-    label <- getkmeansradial(numClust)
-  }
-  else if(approach=="hkmeans"){
-    label <- gethkmeansradial(numClust)
-  }
-  else if(approach=="hierarchical"){
-    label <- gethierarchicalradial(numClust)
-  }
-  else if(approach=="orclus"){
-    label <- getorclusradial(numClust)
-  }
-  else if(approach=="proclus"){
-    label <- getproclusradial(numClust)
-  }
-  else if(approach=="pca-kmeans"){
-    label <- getpcakmeansradial(numClust)
-  }
-  return(label)
+  return(list("label"=label))
 }
 
 ## SHINY APP
@@ -321,7 +257,12 @@ ui<-fluidPage(
                   c("none","kmeans","hkmeans","hierarchical","orclus","proclus","pca-kmeans")),
       
       numericInput("numClust","Select number of clusters",min =2,max = 10,value = 2),
-      
+      conditionalPanel(
+        condition="input.Algorithm == 'orclus'",numericInput("findim","Final subspace dimensionality",25,2,72),numericInput("initclust","Initial no. of clusters",20,numClust+1,100)
+      ),
+      conditionalPanel(
+        condition="input.Algorithm == 'proclus'",numericInput("avgdim","Average dimensionality",3,3,72)
+      ),
       fluidRow(column(2, verbatimTextOutput("value")))
     ),
     mainPanel( 
@@ -360,7 +301,6 @@ ui<-fluidPage(
       )))
 )
 server<-function(input,output){
-
   condition<-reactive(input$Algorithm)
   viewsel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
                     else paste("The decision tree for", input$Algorithm,"with number of cluster",input$numClust))
@@ -368,61 +308,93 @@ server<-function(input,output){
   sel<-reactive(if(condition()=="none")  "You cannot see the results because you haven't selected any approach" 
                 else paste("The radial chart for", input$Algorithm,"with number of clusters",input$numClust))
   
-  
-  DT<-reactive(if(condition()!="none") dt(input$Algorithm,input$numClust))
-  label <- reactive(if(condition()!="none") radialchart(input$Algorithm,input$numClust))
-  cluster_plot_data <- reactive(if(condition()!="none") getPlotData(input$Algorithm,label(),input$numClust))
+  label <- reactive(if(condition()!="none") {switch(input$Algorithm, "proclus"=getLabelproc(input$numClust,input$avgdim),"orclus"=getLabelorc(input$numClust,input$findim,input$initclust),
+                                                    getLabel(input$Algorithm,input$numClust) )
+  })
+  DT<-reactive(if(condition()!="none" ) dt(input$Algorithm,label()$label))
+   
+  cluster_plot_data <- reactive(if(condition()!="none" && condition()!="proclus" ) getPlotData(input$Algorithm,label()$label,input$numClust))
   
   output$Dt<-renderPlot({DT()})
   
   output$Rc1<-renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,1), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[1]], script = "cluster_chart.js",viewer ="internal")
+    }
   })
   
   output$Rc2 <- renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,2), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[2]], script = "cluster_chart.js",viewer ="internal")
-  })
+    }
+    })
   
   output$Rc3<-renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,3), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[3]], script = "cluster_chart.js",viewer ="internal")
-  })
+    }
+    })
   
   output$Rc4 <- renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,4), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[4]], script = "cluster_chart.js",viewer ="internal")
+    }
   })
   
   output$Rc5 <- renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,5), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[5]], script = "cluster_chart.js",viewer ="internal")
+    }
   })
   
   output$Rc6 <- renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,6), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[6]], script = "cluster_chart.js",viewer ="internal")
+    }
   })
   
   output$Rc7 <- renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,7), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[7]], script = "cluster_chart.js",viewer ="internal")
+    }
   })
   
   output$Rc8 <- renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,8), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[8]], script = "cluster_chart.js",viewer ="internal")
+    }
   })
   
   output$Rc9 <- renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,9), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[9]], script = "cluster_chart.js",viewer ="internal")
+    }
   })
   
   output$Rc10 <- renderD3({
-    if(condition()!="none")
+    if(condition()=="proclus")
+      r2d3(data = getProclusPlotData("Proclus",label()$objradial,10), script = "cluster_chart.js",viewer ="internal")
+    else if (condition()!="none") {
       r2d3(data = cluster_plot_data()[[10]], script = "cluster_chart.js",viewer ="internal")
+    }
   })
   output$selected<-renderText({sel()})
   output$out<-renderText({viewsel()})
