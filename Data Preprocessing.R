@@ -49,26 +49,77 @@ df_allF_scaled<-scale(df_allF)%>%data.frame()
 
 library(sqldf)
 
-correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
-
-cat("\ncorrelation with 90%:\n")
-matriz_cor <- cor(df_allF,method = "spearman")
-
-for (i in 1:nrow(matriz_cor)){
-  correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
-  matriz_cor[correlations,i] <- NA
+correlations <- function()
+{
+  correlated_coloumns <- data.frame(F1 = character(),F2 = character())
   
-  if(length(correlations)> 0){
-    #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
-    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations],coef=matriz_cor[i,correlations]))
-    rownames(correlated_coloumns) <- NULL
+  #cat("\ncorrelation with 90%:\n")
+  matriz_cor <- cor(df_allF,method = "spearman")
+  
+  
+  for (i in 1:nrow(matriz_cor)){
+    correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
+    matriz_cor[correlations,i] <- NA
+    
+    if(length(correlations)> 0){
+      #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
+      correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations]))
+      rownames(correlated_coloumns) <- NULL
+    }
   }
+  
+  
+  # correlated_coloumns <- as.data.frame((correlated_coloumns))
+  # correlated_coloumns$F1 <- as.character(correlated_coloumns$F1)
+  # correlated_coloumns$F2 <- as.character(correlated_coloumns$F2)
+  
+  x <- as.list(sqldf("SELECT distinct(F1) as feat FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns") )
+  count <- data.frame(matrix(ncol = length(x$feat), nrow = 0))
+  count[1,] <- 0
+  colnames(count) <- x$feat
+  
+  for (i in correlated_coloumns$F1) {
+    count[1,which(colnames(count) == i)] <- count[1,which(colnames(count) == i)] + 1
+  }
+  for (i in correlated_coloumns$F2) {
+    count[1,which(colnames(count) == i)] <- count[1,which(colnames(count) == i)] + 1
+  }
+  count <- as.data.frame(t(apply(count, 1, FUN=function(x) sort(x, decreasing=TRUE))))
+  
+  x <- c()
+  k <- 1
+  
+  for ( i in 1:length(colnames(count))) {
+    if(i < length(colnames(count))) {
+      for (j in 1:length(correlated_coloumns$F1)) {
+        if(colnames(count[i]) == correlated_coloumns$F1[j])
+        {
+          num <- which(colnames(count) == correlated_coloumns$F2[j])
+          x[k] <- colnames(count[num])
+          count <- select(count,-num)
+          k <- k + 1
+        }
+      }
+      for (j in 1:length(correlated_coloumns$F2)) {
+        if(colnames(count[i]) == correlated_coloumns$F2[j])
+        {
+          num <- which(colnames(count) == correlated_coloumns$F1[j])
+          x[k] <- colnames(count[num])
+          count <- select(count,-num)
+          k <- k + 1
+        }
+      }
+    }
+    else 
+      break()
+  }
+  return(x)
 }
-
 ###################################### No correlated columns ####################################
 
+x <- correlations()
 #dropping the columns
-df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
+df_noCorr <- select(df_allF,-x)
 
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
