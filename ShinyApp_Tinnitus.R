@@ -421,8 +421,7 @@ ui <- fluidPage(pageWithSidebar(
         "initclust",
         "Initial no. of clusters",
         20,
-        "input.numClust+1",
-        100
+        max =  100
       )
     ),
     conditionalPanel(
