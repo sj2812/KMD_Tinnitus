@@ -269,34 +269,34 @@ ui<-fluidPage(
       navbarPage(
         title = 'Visualization Options',
         tabPanel("Decision Tree",textOutput("out"),plotOutput('Dt')) ,
-        tabPanel("Radial Chart",textOutput("selected"), d3Output('Rc1'),
+        tabPanel("Radial Chart",textOutput("selected"), d3Output('Rc1',height = "500px"),
                  conditionalPanel(
                    condition = "input.numClust >= 2",
-                   hr(),d3Output("Rc2")),
+                   hr(),d3Output("Rc2",height = "500px")),
                  conditionalPanel(
                    condition = "input.numClust >= 3",
-                   hr(),d3Output("Rc3")),
+                   hr(),d3Output("Rc3",height = "500px")),
                  conditionalPanel(
                    condition = "input.numClust >= 4",
-                   hr(),d3Output("Rc4")),
+                   hr(),d3Output("Rc4",height = "500px")),
                  conditionalPanel(
                    condition = "input.numClust >= 5",
-                   hr(),d3Output("Rc5")),
+                   hr(),d3Output("Rc5",height = "500px")),
                  conditionalPanel(
                    condition = "input.numClust >= 6",
-                   hr(),d3Output("Rc6")),
+                   hr(),d3Output("Rc6",height = "500px")),
                  conditionalPanel(
                    condition = "input.numClust >= 7",
-                   hr(),d3Output("Rc7")),
+                   hr(),d3Output("Rc7",height = "500px")),
                  conditionalPanel(
                    condition = "input.numClust >= 8",
-                   hr(),d3Output("Rc8")),
+                   hr(),d3Output("Rc8",height = "500px")),
                  conditionalPanel(
                    condition = "input.numClust >= 9",
-                   hr(),d3Output("Rc9")),
+                   hr(),d3Output("Rc9",height = "500px")),
                  conditionalPanel(
                    condition = "input.numClust >= 10",
-                   hr(),d3Output("Rc10"))
+                   hr(),d3Output("Rc10",height = "500px"))
         )
       )))
 )

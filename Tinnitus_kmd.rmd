@@ -462,6 +462,21 @@ impfeatorder<-impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy),]
 impfeatorder[, "MeanDecreaseAccuracy", drop=FALSE]
 }
 ```
+The following chunk returns the number of principle components for a desired variance.
+```{r}
+getnumberPcs<-function(variance,km.pc){
+  PCvar <- as.data.frame(t(summary(km.pc)$importance[3,]))
+j <- 0
+for(i in seq(1:ncol(PCvar))){
+    if(PCvar[1,i]<=variance)
+    { 
+      j <- j+1
+    }
+}
+return(j)
+}
+
+```
 
 
 ## Fetching labels Performing Radial Chart Visualisation and Decision Tree for selected Cluster numbers
@@ -517,10 +532,10 @@ getprocluslabels<-function(numClust){
 }
    
 
-getpcakmeanslabels<-function(numClust){
+getpcakmeanslabels<-function(numClust,variance){
   set.seed(123)
   km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
-  PC_num <- 18
+  PC_num <- getnumberPcs(variance,km.pc)
   df_PC <- km.pc$x[,1:PC_num]
   pckmclust <- kmeans(df_PC, numClust)
   pckm_labels <- pckmclust$cluster 
@@ -541,7 +556,7 @@ This chunk can be used for Configuration of different approaches. Function calls
   #following load function with the filename data and append the number of clusters for. eg. data3= result of proclus   #when number of clusters was 3.  
   load("data 2 .RData")
   orclusres<-getorcluslabels(4)
-  pckmres<-getpcakmeanslabels(2)
+  pckmres<-getpcakmeanslabels(2,0.7)
   
 ```
 
