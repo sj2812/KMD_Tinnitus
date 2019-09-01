@@ -262,6 +262,7 @@ createPlotData<-function(algo_name,clus_name,cluster_scaled,cluster)
 }
 getPlotData<-function(algo_name,final_labels,no_of_clusters)
 {
+  
   # labelling the records 
   df_allF_labeled<-df_allF%>%
   mutate(label = final_labels)
@@ -283,6 +284,7 @@ cluster_features<-data.frame(df_allF_labeled%>%
     plotData[[i]]<-createPlotData(algo_name,clus_name,cluster_features_scaled[i,],cluster_features[i,])
   }
   return(plotData)
+  
 }
 getProclusPlotData<- function(algo_name,proclus_cluster,cluster_num)
 {
@@ -405,6 +407,7 @@ First the Labels are fetched for each clustering algorithm, which is then passed
 
 ```{r}
 getKmeanslabels<-function(numClust){
+  set.seed(123)
   kmclust <- kmeans(df_noCorr_scaled, numClust)
   km_labels <- kmclust$cluster 
   return(list("labels"=km_labels,"numClust"=numClust))
@@ -412,6 +415,7 @@ getKmeanslabels<-function(numClust){
    
 
 gethKmeanslabels<-function(numClust){
+  set.seed(123)
   hkmclust <- hkmeans(df_noCorr_scaled, numClust)
   hkm_labels <- hkmclust$cluster 
   return(list("labels"=hkm_labels,"numClust"=numClust))
@@ -419,6 +423,7 @@ gethKmeanslabels<-function(numClust){
    
    
 gethierarchicallabels<-function(numClust){
+  set.seed(123)
   dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
   hc <-agnes(dist_matrix, method = "ward")
   h_labels<-cutree(hc,k=numClust)
@@ -427,6 +432,7 @@ gethierarchicallabels<-function(numClust){
    
 
 getprocluslabels<-function(numClust){
+  set.seed(123)
   ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=numClust,d=70)
   
   labels<-c()
@@ -441,6 +447,7 @@ getprocluslabels<-function(numClust){
    
    
  getorcluslabels<-function(numClust){
+   set.seed(123)
   library(orclus)
   orclus_res_k <- orclus(df_noCorr_scaled,k = numClust,l = 25, k0 = 20)
   ok_labels <- orclus_res_k$cluster
@@ -449,6 +456,7 @@ getprocluslabels<-function(numClust){
    
 
 getpcakmeanslabels<-function(numClust){
+  set.seed(123)
   km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
   PC_num <- 18
   df_PC <- km.pc$x[,1:PC_num]
@@ -458,12 +466,16 @@ getpcakmeanslabels<-function(numClust){
 }
 ```
 ## User configuration
-This chunk can be used for Configuration of different approaches. Function calls to get the cluster assignment of the approches.
+This chunk can be used for Configuration of different approaches. Function calls to get the cluster assignment of the approches.User can store the proclus result object to a file for future reuse.
 ```{r} 
   kmeansres<-getKmeanslabels(6)
   hierarchicalres<-gethierarchicallabels(6)
   hkmeansres<-gethKmeanslabels(4)
-  proclusres<-getprocluslabels(5)
+  proclusres<-getprocluslabels(10)
+  #save(proclusres, file = paste("data",proclusres$numClust,".RData"))
+  #If you wan to view results for particular number of clusters that was previously run then using the 
+  #following load function with the filename data and append the number of clusters for. eg. data3= result of proclus   #when number of clusters was 3.  
+  load("data10.RData")
   orclusres<-getorcluslabels(4)
   pckmres<-getpcakmeanslabels(2)
 ```
@@ -540,7 +552,7 @@ All the results can be seen after running this chunk
   createDT(hkmeansres$labels,0)
   
   #proclus
-  cluster_plot_data<-getPlotData("proclus",proclusres$labels,proclusres$numClust)
+  
    r2d3(data = getProclusPlotData("Proclus",proclusres$objradial,1), script = "cluster_chart.js",viewer ="internal")
    r2d3(data = getProclusPlotData("Proclus",proclusres$objradial,2), script = "cluster_chart.js",viewer ="internal")
    
