@@ -495,7 +495,7 @@ gethierarchicallabels<-function(numClust){
 
 getprocluslabels<-function(numClust){
   set.seed(123)
-  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=numClust,d=70)
+  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=numClust,d=25)
   
   labels<-c()
   
@@ -535,11 +535,11 @@ This chunk can be used for Configuration of different approaches. Function calls
   kmeansres<-getKmeanslabels(6)
   hierarchicalres<-gethierarchicallabels(6)
   hkmeansres<-gethKmeanslabels(4)
-  proclusres<-getprocluslabels(10)
+  proclusres<-getprocluslabels(2)
   #save(proclusres, file = paste("data",proclusres$numClust,".RData"))
   #If you wan to view results for particular number of clusters that was previously run then using the 
   #following load function with the filename data and append the number of clusters for. eg. data3= result of proclus   #when number of clusters was 3.  
-  load("data10.RData")
+  load("data 2 .RData")
   orclusres<-getorcluslabels(4)
   pckmres<-getpcakmeanslabels(2)
   

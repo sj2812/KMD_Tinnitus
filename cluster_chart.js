@@ -53,7 +53,7 @@ svg=svg.append("g")
     .attr("fill", d=>d.scaled_cluster_feature_value<0?"#B53737":"#69b3a2")
     .attr("d", d3.arc()     // imagine your doing a part of a donut plot
       .innerRadius(innerRadius)
-      .outerRadius(function(d) { return y(d.scaled_cluster_feature_value); })
+      .outerRadius(d=>d.scaled_cluster_feature_value<-1.5?y(-1.5):(d.scaled_cluster_feature_value>1.5?y(1.5):y(d           .scaled_cluster_feature_value)))
       .startAngle(function(d) { return x(d.feature); })
       .endAngle(function(d) { return x(d.feature) + x.bandwidth(); })
       .padAngle(0.01)
