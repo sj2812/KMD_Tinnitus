@@ -112,7 +112,7 @@ df_allF_scaled<-scale(df_allF)%>%data.frame()
 We will find out the co related columns in the data and drop them
 
 ```{r Correlation}
-correlations <- function()
+correlations <- function(corrval)
 {
   correlated_coloumns <- data.frame(F1 = character(),F2 = character())
   
@@ -121,7 +121,7 @@ correlations <- function()
   
   
   for (i in 1:nrow(matriz_cor)){
-    correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
+    correlations <-  which((abs(matriz_cor[i,]) > corrval) & (matriz_cor[i,] != 1))
     matriz_cor[correlations,i] <- NA
     
     if(length(correlations)> 0){
@@ -176,12 +176,12 @@ correlations <- function()
 
 
 ```
-
+## User configuration for the value of correlation.
 
 ```{r}
 ###################################### No correlated columns ####################################
 
-feature_remove <- correlations()
+feature_remove <- correlations(0.9)
 #dropping the columns
 df_noCorr <- select(df_allF,-feature_remove)
 
@@ -499,18 +499,18 @@ gethKmeanslabels<-function(numClust){
 }
    
    
-gethierarchicallabels<-function(numClust){
+gethierarchicallabels<-function(numClust,clustmethod){
   set.seed(123)
   dist_matrix<-dist(df_noCorr_scaled, method = "euclidean")
-  hc <-agnes(dist_matrix, method = "ward")
+  hc <-agnes(dist_matrix, method = clustmethod)
   h_labels<-cutree(hc,k=numClust)
   return(list("labels"=h_labels,"numClust"=numClust))
 }
    
 
-getprocluslabels<-function(numClust){
+getprocluslabels<-function(numClust,avgdim){
   set.seed(123)
-  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=numClust,d=25)
+  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=numClust,d=avgdim)
   
   labels<-c()
   
@@ -523,10 +523,10 @@ getprocluslabels<-function(numClust){
 }
    
    
- getorcluslabels<-function(numClust){
+ getorcluslabels<-function(numClust,l,k0){
    set.seed(123)
   library(orclus)
-  orclus_res_k <- orclus(df_noCorr_scaled,k = numClust,l = 25, k0 = 20)
+  orclus_res_k <- orclus(df_noCorr_scaled,k = numClust,l = l, k0 = k0)
   ok_labels <- orclus_res_k$cluster
   return(list("labels"=ok_labels,"numClust"=numClust))
 }
@@ -547,21 +547,28 @@ getpcakmeanslabels<-function(numClust,variance){
 
 This chunk can be used for Configuration of different approaches. Function calls to get the cluster assignment of the approches.User can store the proclus result object to a file for future reuse.
 ```{r} 
+#kmeans with configurable no. of clusters
   kmeansres<-getKmeanslabels(6)
-  hierarchicalres<-gethierarchicallabels(6)
-  hkmeansres<-gethKmeanslabels(4)
-  proclusres<-getprocluslabels(2)
-  #save(proclusres, file = paste("data",proclusres$numClust,".RData"))
-  #If you wan to view results for particular number of clusters that was previously run then using the 
-  #following load function with the filename data and append the number of clusters for. eg. data3= result of proclus   #when number of clusters was 3.  
-  load("data 2 .RData")
-  orclusres<-getorcluslabels(4)
+#hierarchical with configurable no. of clusters and clustering method("ward","average","single","complete","weighted")
+  hierarchicalres<-gethierarchicallabels(6,"ward")
+ #hkmeans with configurable no. of clusters and clustering method("ward","average","single","complete","weighted") 
+  hkmeansres<-gethKmeanslabels(4,"ward")
+#Proclus with configurable no. of clusters and average dimensionality
+  proclusres<-getprocluslabels(2,25)
+# saving the proclus results to view them later
+  save(proclusres, file = paste("data",proclusres$numClust,".RData"))
+  #If you want to view results for particular number of clusters that was previously run then using the following load function with the filename data and append the number of clusters for. eg. data 3 .RData= result of proclus  when number of clusters was 3.  
+  
+  #load("data 2 .RData")
+#orclus with configurable no. of clusters, final subspace dimension and initial number of clusters
+  orclusres<-getorcluslabels(4,25,20)
   pckmres<-getpcakmeanslabels(2,0.7)
   
 ```
 
-All the results can be seen after running this chunk
+All the results can be seen after running this chunk for number of clusters 2 to 10
 ```{r}
+ message("Note:The radial charts can be seen only for 10 clusters")
 #kmeans
    cluster_plot_data<-getPlotData("Kmeans",kmeansres$labels,kmeansres$numClust)
    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
