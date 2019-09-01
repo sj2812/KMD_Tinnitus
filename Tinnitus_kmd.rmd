@@ -55,6 +55,7 @@ library(subspace)
 library(orclus)
 library(diceR)
 library(clValid)
+library(sqldf)
 
 ```
 
@@ -111,30 +112,83 @@ df_allF_scaled<-scale(df_allF)%>%data.frame()
 We will find out the co related columns in the data and drop them
 
 ```{r Correlation}
-correlated_coloumns <- data.frame(F1 = character(),F2 = character(),coef = numeric())
-
-#cat("\ncorrelation with 90%:\n")
-matriz_cor <- cor(df_allF,method = "spearman")
-
-for (i in 1:nrow(matriz_cor)){
-  correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
-  matriz_cor[correlations,i] <- NA
+correlations <- function()
+{
+  correlated_coloumns <- data.frame(F1 = character(),F2 = character())
   
-  if(length(correlations)> 0){
-    #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
-    correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations],coef=matriz_cor[i,correlations]))
-    rownames(correlated_coloumns) <- NULL
+  #cat("\ncorrelation with 90%:\n")
+  matriz_cor <- cor(df_allF,method = "spearman")
+  
+  
+  for (i in 1:nrow(matriz_cor)){
+    correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
+    matriz_cor[correlations,i] <- NA
+    
+    if(length(correlations)> 0){
+      #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
+      correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations]))
+      rownames(correlated_coloumns) <- NULL
+    }
   }
+  
+  x <- as.list(sqldf("SELECT distinct(F1) as feat FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns") )
+  count <- data.frame(matrix(ncol = length(x$feat), nrow = 0))
+  count[1,] <- 0
+  colnames(count) <- x$feat
+  
+  for (i in correlated_coloumns$F1) {
+    count[1,which(colnames(count) == i)] <- count[1,which(colnames(count) == i)] + 1
+  }
+  for (i in correlated_coloumns$F2) {
+    count[1,which(colnames(count) == i)] <- count[1,which(colnames(count) == i)] + 1
+  }
+  count <- as.data.frame(t(apply(count, 1, FUN=function(x) sort(x, decreasing=TRUE))))
+  
+  feature_remove <- c()
+  k <- 1
+  
+  for ( i in 1:length(colnames(count))) {
+    if(i < length(colnames(count))) {
+      for (j in 1:length(correlated_coloumns$F1)) {
+        if(colnames(count[i]) == correlated_coloumns$F1[j])
+        {
+          num <- which(colnames(count) == correlated_coloumns$F2[j])
+          feature_remove[k] <- colnames(count[num])
+          count <- select(count,-num)
+          k <- k + 1
+        }
+      }
+      for (j in 1:length(correlated_coloumns$F2)) {
+        if(colnames(count[i]) == correlated_coloumns$F2[j])
+        {
+          num <- which(colnames(count) == correlated_coloumns$F1[j])
+          feature_remove[k] <- colnames(count[num])
+          count <- select(count,-num)
+          k <- k + 1
+        }
+      }
+    }
+    else 
+      break()
+  }
+  return(feature_remove)
 }
 
-#No correlated columns
 
+```
+
+
+```{r}
+###################################### No correlated columns ####################################
+
+feature_remove <- correlations()
 #dropping the columns
-df_noCorr <- select(df_allF,-c("sf8_mh_sf36pw","tq_tf","tq_em","tq_co"))
+df_noCorr <- select(df_allF,-feature_remove)
 
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
 ```
+
 ## Elbow Method
 Elbow method for getting optimal value of k. The idea behind elbow method is to to define number of clusters such that the total within-cluster sum of square (WSS) is minimized. The value of chosen k is such that adding another cluster does not affect the overall wss much.
 ```{r Elbow Method}
@@ -465,7 +519,9 @@ getpcakmeanslabels<-function(numClust){
   return(list("labels"=pckm_labels,"numClust"=numClust))
 }
 ```
+
 ## User configuration
+
 This chunk can be used for Configuration of different approaches. Function calls to get the cluster assignment of the approches.User can store the proclus result object to a file for future reuse.
 ```{r} 
   kmeansres<-getKmeanslabels(6)
@@ -478,6 +534,7 @@ This chunk can be used for Configuration of different approaches. Function calls
   load("data10.RData")
   orclusres<-getorcluslabels(4)
   pckmres<-getpcakmeanslabels(2)
+  
 ```
 
 All the results can be seen after running this chunk
