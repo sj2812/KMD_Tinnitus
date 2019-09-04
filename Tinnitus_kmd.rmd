@@ -27,7 +27,7 @@ The project is organised as follows:
 * Subspace Clustering
 * Evaluation
 
-```{r setup, include=TRUE}
+```{r setup, include=TRUE, message=FALSE,warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 remove(list=ls())
 gc(reset = TRUE)
@@ -761,7 +761,7 @@ These function calls are used to get the cluster assignment of the approches.Use
   hkmeansres<-gethKmeanslabels(numClusthKmeans,clustering_method_hkmeans)
   
   if(reproduceProclusResults){
-      load("data 2 .RData")
+      load(path)
     } else {
       proclusres<-getprocluslabels(numClustProclus,avgDimProclus)
     #saving the proclus results to view them later
