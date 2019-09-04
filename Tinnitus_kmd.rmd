@@ -4,8 +4,49 @@ author: "Abhilash, Kritika, Priyanka, Shivani"
 date: "19 August 2019"
 output: html_document
 ---
-```{r setup, include=FALSE}
+```{r setup, include=TRUE}
 knitr::opts_chunk$set(echo = TRUE)
+#User Configuration
+
+correlationValue<-0.9  #choose from 0.1 to 1.0
+
+#choose number of clusters  from 2 to 10
+
+numClustKmeans<-2
+
+
+numClusthierarchical<-2
+#clustering method("ward","average","single","complete","weighted")
+clustering_method_hierarchical<-"ward"
+#do you want to tune hierarchical clustering to get the best
+tuneHierarchical<-FALSE
+numClusthKmeans<-2
+clustering_method_hkmeans<-"ward"
+
+
+numClustProclus<-4
+#Do you want to reproduce the proclus results that were described in the report(True/False)
+reproduceProclusResults<-FALSE
+avgDimProclus<-25
+
+numClustOrclus<-2
+finalSubspaceDimOrclus<-20
+initialNumberOfClustersOrclus<-25
+#do you want to tune Orclus
+tuneOrclus<-TRUE
+
+numClustPCAKmeans<-2
+variancePCAKmeans<-0.7 #choose from 0.1 to 1.0
+
+#Do you want to validate the obtained DT using Random Forest
+valDTkmeans<-TRUE
+valDThkmeans<-TRUE
+valDThierarchical<-TRUE
+valDTProclus<-TRUE
+valDTOrclus<-TRUE
+valDTPCAKmeans<-TRUE
+
+
 ```
 
 ## Motivation
@@ -33,29 +74,22 @@ The project is organised as follows:
 ***
 Let us first load all necessary libraries for this project
 ```{r Libraries, message=FALSE, warning=FALSE}
-#If any errors are thrown while loading libraries please install the packages commented below
-#install.packages("tidyverse")
-#install.packages("caret")
-#install.packages("rpart.plot")
-#install.packages("e1071")
 library(dplyr)
-library(tidyverse)  # data manipulation
-library(cluster)    # clustering algorithms
-library(factoextra) # clustering visualization
-library(dendextend) # for comparing two dendrograms
+library(tidyverse)  
+library(cluster)    
+library(factoextra) 
+library(dendextend)
 library(r2d3)
 library(sqldf)
 library(caret)
 library(rpart.plot)
 library(e1071)
-library(randomForest)
 library(mlbench)
 library(rJava)
-library(subspace)
-library(orclus)
 library(diceR)
-library(clValid)
 library(sqldf)
+library(clValid)
+library(randomForest)
 
 ```
 
@@ -100,7 +134,7 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
   drop_na()
 originaldf <- read_rds("190426_charite_tinnitus.rds")
 ```
-Now lets remove 'journ.no' as it is an identifier and will not be useful for analysis.
+Now lets remove the identifier as it will not be useful for analysis.
 
 ```{r Dataframe all features}
 df_allF <- select(df,-c(.jour_nr))
@@ -109,7 +143,7 @@ df_allF <- select(df,-c(.jour_nr))
 df_allF_scaled<-scale(df_allF)%>%data.frame()
 ```
 
-We will find out the co related columns in the data and drop them
+We will find out the correlated columns in the data and drop them
 
 ```{r Correlation}
 correlations <- function(corrval)
@@ -181,10 +215,10 @@ correlations <- function(corrval)
 ```{r}
 ###################################### No correlated columns ####################################
 
-feature_remove <- correlations(0.9)
+feature_remove <- correlations(correlationValue)
 #dropping the columns
 df_noCorr <- select(df_allF,-feature_remove)
-
+print("There are no correlated columns")
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
 ```
@@ -199,16 +233,19 @@ rownames( df_noCorr_scaled ) <- seq_len( nrow( df_noCorr_scaled ) )
 wss <- sapply(1:k.max, 
               function(k){kmeans(df_noCorr_scaled, k, nstart=50,iter.max = 15 )$tot.withinss})
 wss
+
 plot(1:k.max, wss,
      type="b", pch = 19, frame = FALSE, 
      xlab="Number of clusters K",
      ylab="Total within-clusters sum of squares")
+title(main="Elbow Method")
+
 ```
 
 
 ## Bootstrap Sampling
 
-Create different samples (with replacement) of data from the original dataset. With varying data (different samples), we will can check if the clustering results are stable or not. So we are plotting a Box-plot for each values of K against "Total within sum of square errors (totwss)". We need to check if the result follows the same trend as the original elbow method does, or there is a significant change in the plot. 
+Create different samples (with replacement) of data from the original dataset. With varying data (different samples), we can check if the clustering results are stable or not. So we are plotting a Box-plot for each value of K against "Total within sum of square errors (totwss)". We need to check if the result follows the same trend as the original elbow method does, or there is a significant change in the plot. 
 
 ```{r Bootstrap}
 #No. of Bootsamples to be created
@@ -259,10 +296,11 @@ So we first create a list of these methods and then create clusters for each com
 
 Then we can calculate the clusters. The ac value of each cluster gives the quality/ tightness of each cluster. The closer the value is to 1 the better are the results.
 
-**the agglomerative coefficient, measuring the clustering structure of the dataset.
+"the agglomerative coefficient, measuring the clustering structure of the dataset.
 
-For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes.**
+For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes."
 ```{r Hierarchical Tune, echo=FALSE}
+tunehierarchical<-function(){
 set.seed(123)
 # methods to assess inter cluster similarity
 m <- c( "average", "single", "complete", "ward")
@@ -292,6 +330,37 @@ for(dist_m in dist_methods)
     }
   }
 }
+}
+if(tuneHierarchical)
+  tunehierarchical()
+```
+The following chunk tunes the hyper-parameters l(final cluster specific subspaces dimension) and k0(initial number of clusters) by the “sparsity.coefficient” and the “within.projenss”measures obtained along with the clustering result where lower values for sparcity coefficientand wss are expected.
+```{r OrclusTune,echo=FALSE}
+
+#Represents the tuning of clusters according to quality measures
+
+ tune_orclus <- function(num_of_clusters)
+{
+   tune_lf_sparsity<- data.frame(k = numeric(),dim = numeric(),sparsity = numeric(),proj = numeric())
+
+   j<-1
+  for (k in seq(10,30,by = 5)) {
+  
+    for (i in seq(20,60,by = 5)) {
+  
+      orclus_res_k2 <- orclus:: orclus(x = df_noCorr_scaled,k=2,l = i, k0 = k,verbose=FALSE)
+      tune_lf_sparsity[j,1] <- k
+      tune_lf_sparsity[j,2] <- i
+      tune_lf_sparsity[j,3] <- orclus_res_k2$sparsity.coefficient
+      tune_lf_sparsity[j,4] <- sum(orclus_res_k2$within.projens)
+      j <- j+1
+    }
+  }
+   return (tune_lf_sparsity)
+}
+if(tuneOrclus)
+  tune_orclus(numClustOrclus)
+
 ```
 ## Visualisation
 
@@ -302,8 +371,8 @@ feature_summary_scaled<-data.frame(df_allF_scaled%>%
 feature_summary<-data.frame(df_allF%>%
                               summarise_each(mean))
 ```
-For visualisation of clustering results we choose a radial chart.
-To generate this radial chart we need format the data in a data structure suitable for plotting.
+For visualisation of clustering results we choose radial chart.
+To generate this radial chart we need to format the data in a data structure suitable for plotting.
 The bar height is the scaled value of the features of a cluster. The tooltip gives extra information about the actual feature value and the population mean for the feature.
 ```{r Visualisation}
 #Finally creating a data frame which can be used for the visualization
@@ -398,7 +467,15 @@ createDT<-function(final_labels,remove_na)
                      trControl=trctrl,
                      tuneLength = 10)
   
-  prp(dtree_fit$finalModel, box.palette = "Reds", tweak = 1.2)
+  prp(
+    dtree_fit$finalModel,
+    extra = 2,
+    box.palette = "Reds",
+    tweak = 1.5,
+    varlen
+    = -10,
+    branch.type = 5
+  )
 }
 ```
 ## Random Forest
@@ -429,16 +506,18 @@ customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
   predict(modelFit, newdata, type = "prob")
 # train model
 control <- trainControl(method="repeatedcv", number=5, repeats=2)
-tunegrid <- expand.grid(.mtry=c(5:12), .ntree=c(500,1000, 1500))
+tunegrid <- expand.grid(.mtry=c(5:7), .ntree=c(500,1000))
 set.seed(123)
 custom <- train(label~., data=data, method=customRF,  tuneGrid=tunegrid, trControl=control)
 #summary(custom)
 plot(custom)
 print(custom)
+return(custom$bestTune)
 }
 
 ##applying random forest
 applyrf<-function(labels,numClusters,ntree,mtry,remove_na){
+  
 # labelling the records 
   df_allF_labeled<-df_allF%>%
   mutate(label = labels)
@@ -479,7 +558,7 @@ return(j)
 ```
 
 
-## Fetching labels Performing Radial Chart Visualisation and Decision Tree for selected Cluster numbers
+## Fetching labels for Performing Radial Chart Visualisation and Decision Tree for selected Cluster numbers
 First the Labels are fetched for each clustering algorithm, which is then passed into the initVis function alongwith the cluster number to create Radial Chart visualisations. Decision tree function is then called to visualize the decision points that can be used by the user to ask the relevant questions to come to a sub-group of Tinnitus.
 
 ```{r}
@@ -491,9 +570,9 @@ getKmeanslabels<-function(numClust){
 }
    
 
-gethKmeanslabels<-function(numClust){
+gethKmeanslabels<-function(numClust,clustmethod){
   set.seed(123)
-  hkmclust <- hkmeans(df_noCorr_scaled, numClust)
+  hkmclust <- hkmeans(df_noCorr_scaled, numClust,hc.method = clustmethod)
   hkm_labels <- hkmclust$cluster 
   return(list("labels"=hkm_labels,"numClust"=numClust))
 }
@@ -510,7 +589,7 @@ gethierarchicallabels<-function(numClust,clustmethod){
 
 getprocluslabels<-function(numClust,avgdim){
   set.seed(123)
-  ProClus.clusters.k<- ProClus(df_noCorr_scaled,k=numClust,d=avgdim)
+  ProClus.clusters.k<- subspace:: ProClus(df_noCorr_scaled,k=numClust,d=avgdim)
   
   labels<-c()
   
@@ -524,9 +603,8 @@ getprocluslabels<-function(numClust,avgdim){
    
    
  getorcluslabels<-function(numClust,l,k0){
-   set.seed(123)
-  library(orclus)
-  orclus_res_k <- orclus(df_noCorr_scaled,k = numClust,l = l, k0 = k0)
+  set.seed(123)
+  orclus_res_k <- orclus:: orclus(df_noCorr_scaled,k = numClust,l = l, k0 = k0)
   ok_labels <- orclus_res_k$cluster
   return(list("labels"=ok_labels,"numClust"=numClust))
 }
@@ -545,24 +623,23 @@ getpcakmeanslabels<-function(numClust,variance){
 
 ## User configuration
 
-This chunk can be used for Configuration of different approaches. Function calls to get the cluster assignment of the approches.User can store the proclus result object to a file for future reuse.
+This chunk can be used for Configuration of different approaches. These function calls are used to get the cluster assignment of the approches.User can store the proclus result object to a file for future reuse.
 ```{r} 
-#kmeans with configurable no. of clusters
-  kmeansres<-getKmeanslabels(6)
-#hierarchical with configurable no. of clusters and clustering method("ward","average","single","complete","weighted")
-  hierarchicalres<-gethierarchicallabels(6,"ward")
- #hkmeans with configurable no. of clusters and clustering method("ward","average","single","complete","weighted") 
-  hkmeansres<-gethKmeanslabels(4,"ward")
-#Proclus with configurable no. of clusters and average dimensionality
-  proclusres<-getprocluslabels(2,25)
-# saving the proclus results to view them later
+
+  kmeansres<-getKmeanslabels(numClustKmeans)
+
+  hierarchicalres<-gethierarchicallabels(numClusthierarchical,clustering_method_hierarchical)
+  hkmeansres<-gethKmeanslabels(numClusthKmeans,clustering_method_hkmeans)
+if(reproduceProclusResults){
+  load("data 2 .RData")
+} else {
+  proclusres<-getprocluslabels(numClustProclus,avgDimProclus)
+  #saving the proclus results to view them later
   save(proclusres, file = paste("data",proclusres$numClust,".RData"))
-  #If you want to view results for particular number of clusters that was previously run then using the following load function with the filename data and append the number of clusters for. eg. data 3 .RData= result of proclus  when number of clusters was 3.  
+  } 
+  orclusres<-getorcluslabels(4,finalSubspaceDimOrclus,initialNumberOfClustersOrclus)
   
-  #load("data 2 .RData")
-#orclus with configurable no. of clusters, final subspace dimension and initial number of clusters
-  orclusres<-getorcluslabels(4,25,20)
-  pckmres<-getpcakmeanslabels(2,0.7)
+  pckmres<-getpcakmeanslabels(4,variancePCAKmeans)
   
 ```
 
@@ -710,27 +787,44 @@ All the results can be seen after running this chunk for number of clusters 2 to
 ## Note: 
 To be run after creating labels below. Used for building Random Forest to validate the decision trees along with the tuning of parameters of random forest.
 
-```{r RF Tune}
+```{r Tune}
 ##function call
- # tuneRandomForest(kmeansres$labels)
- # tuneRandomForest(hkmeansres$labels)
- # tuneRandomForest(hierarchicalres$labels)
- # tuneRandomForest(proclusres$labels)
- # tuneRandomForest(orclusres$labels)
- # tuneRandomForest(pckmres$labels)
 
- applyrf(kmeansres$labels,2,1000,5,0)
- applyrf(hierarchicalres$labels,2,1500,6,0)
- applyrf(hkmeansres$labels,2,1500,5,0)
- applyrf(orclusres$labels,2,1500,10,0)
- applyrf(proclusres$labels,2,1000,5,1) 
- applyrf(pckmres$labels,2,1000,5,0)
+if(valDTkmeans){
+ bestparamdf<-tuneRandomForest(kmeansres$labels)
+ applyrf(kmeansres$labels,numClustKmeans,bestparamdf$ntree,bestparamdf$mtry,0)
+}
+if(valDThierarchical){
+  bestparamdf<-tuneRandomForest(hierarchicalres$labels)
+  applyrf(hierarchicalres$labels,numClusthierarchical,bestparamdf$ntree,bestparamdf$mtry,0)
+}
+if(valDThkmeans){
+ bestparamdf<-tuneRandomForest(hkmeansres$labels)
+ applyrf(hkmeansres$labels,numClusthKmeans,bestparamdf$ntree,bestparamdf$mtry,0)
+}
+if(valDTProclus){
+   #bestparamdf<-tuneRandomForest(proclusres$labels,1)
+  applyrf(proclusres$labels,proclusres$numClust,1000,5,1) 
+}
+if(valDTOrclus){
+  bestparamdf<-tuneRandomForest(orclusres$labels)
+  applyrf(orclusres$labels,num,bestparamdf$ntree,bestparamdf$mtry,0)
+}
+if(valDTPCAKmeans){
+  bestparamdf<-tuneRandomForest(pckmres$labels)
+  applyrf(pckmres$labels,numClustPCAKmeans,bestparamdf$ntree,bestparamdf$mtry,0)
+}
+ 
+ 
+
 ```
 
 ## Evaluation :
-* Dunn Index: It is the ratio of minimum of this pairwise distance as the inter-cluster separation (min.separation) to the maximal intra-cluster distance (i.e maximum diameter) as the intra-cluster compactness.If the data set contains compact and well-separated clusters, the diameter of the clusters is expected to be small and the distance between the clusters is expected to be large. Thus, Dunn index should be maximized.
-* Connectivity: corresponds to what extent items are placed in the same cluster as their nearest neighbors in the data space. The connectivity has a value between 0 and infinity and should be minimized.
-* Compactness or cluster cohesion: Measures how close are the objects within the same cluster. A lower within-cluster variation is an indicator of a good compactness (i.e.a good clustering). Smaller values indicate a better clustering structure.
+To compare the clustering results obtained from k-means, agglomerative hierarchical clustering and Hk-means clustering
+* Dunn Index: Dunn Index calculates the ratio of the smallest distance between the points in different clusters to the largest distance between the points within the cluster. Higher value for Dunn Index is desirable. Dunn Index ranges from 0 to 1.
+* Connectivity:The connectivity index measures the extent to which data points are placed in one cluster compared to its nearest neighbors. It ranges from zero to infinity. The lower the connectivity better are the results.
+* Compactness or cluster cohesion: Compactness is calculated by Silhouette width which is the average of silhouette value of all observations. This value ranges from 1 to -1, where values closer to 1 mean the clusters are compact and closer to -1 mean poorly formed clusters.
+
 ```{r Evaluation, echo=FALSE}
 evaluate<-function(labels,numclusters,approach){
   
