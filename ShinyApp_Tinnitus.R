@@ -64,79 +64,68 @@ df_allF <- select(df, -c(.jour_nr))
 df_allF_scaled <- scale(df_allF) %>% data.frame()
 
 
-correlations <- function(value)
-{
-  correlated_coloumns <- data.frame(F1 = character(), F2 = character())
+correlations <- function(cor_threshold) {
+  
+  correlated_coloumns <- data.frame(F1 = character(),F2 = character())
   
   #cat("\ncorrelation with 90%:\n")
-  matriz_cor <- cor(df_allF, method = "spearman")
+  matriz_cor <- cor(df_allF,method = "spearman")
   
   
-  for (i in 1:nrow(matriz_cor)) {
-    correlations <-
-      which((abs(matriz_cor[i, ]) > value) & (matriz_cor[i, ] != 1))
-    matriz_cor[correlations, i] <- NA
+  for (i in 1:nrow(matriz_cor)){
+    correlations <-  which((abs(matriz_cor[i,]) > cor_threshold) & (matriz_cor[i,] != 1))
+    matriz_cor[correlations,i] <- NA
     
-    if (length(correlations) > 0) {
+    if(length(correlations)> 0){
       #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
-      correlated_coloumns <-
-        rbind(correlated_coloumns,
-              data.frame(F1 = colnames(df_allF)[i], F2 = colnames(df_allF)[correlations]))
+      correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations]))
       rownames(correlated_coloumns) <- NULL
     }
   }
   
-  x <-
-    as.list(
-      sqldf(
-        "SELECT distinct(F1) as feat FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns"
-      )
-    )
+  
+  x <- as.list(sqldf("SELECT distinct(F1) as feat FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns") )
   count <- data.frame(matrix(ncol = length(x$feat), nrow = 0))
-  count[1, ] <- 0
+  count[1,] <- 0
   colnames(count) <- x$feat
   
   for (i in correlated_coloumns$F1) {
-    count[1, which(colnames(count) == i)] <-
-      count[1, which(colnames(count) == i)] + 1
+    count[1,which(colnames(count) == i)] <- count[1,which(colnames(count) == i)] + 1
   }
   for (i in correlated_coloumns$F2) {
-    count[1, which(colnames(count) == i)] <-
-      count[1, which(colnames(count) == i)] + 1
+    count[1,which(colnames(count) == i)] <- count[1,which(colnames(count) == i)] + 1
   }
-  count <-
-    as.data.frame(t(apply(
-      count,
-      1,
-      FUN = function(x)
-        sort(x, decreasing = TRUE)
-    )))
+  count <- as.data.frame(t(apply(count, 1, FUN=function(x) sort(x, decreasing=TRUE))))
   
   feature_remove <- c()
   k <- 1
   
-  for (i in 1:length(colnames(count))) {
-    if (i < length(colnames(count))) {
+  for ( i in 1:length(colnames(count))) {
+    if(i < length(colnames(count))) {
       for (j in 1:length(correlated_coloumns$F1)) {
-        if (colnames(count[i]) == correlated_coloumns$F1[j])
+        if(colnames(count[i]) == correlated_coloumns$F1[j])
         {
           num <- which(colnames(count) == correlated_coloumns$F2[j])
-          feature_remove[k] <- colnames(count[num])
-          count <- select(count, -num)
-          k <- k + 1
+          if((correlated_coloumns$F2[j] %in% x) == FALSE) {
+            feature_remove[k] <- colnames(count[num])
+            count <- select(count,-num)
+            k <- k + 1 
+          }
         }
       }
       for (j in 1:length(correlated_coloumns$F2)) {
-        if (colnames(count[i]) == correlated_coloumns$F2[j])
+        if(colnames(count[i]) == correlated_coloumns$F2[j])
         {
           num <- which(colnames(count) == correlated_coloumns$F1[j])
-          feature_remove[k] <- colnames(count[num])
-          count <- select(count, -num)
-          k <- k + 1
+          if((correlated_coloumns$F1[j] %in% x) == FALSE) {
+            feature_remove[k] <- colnames(count[num])
+            count <- select(count,-num)
+            k <- k + 1 
+          }
         }
       }
     }
-    else
+    else 
       break()
   }
   return(feature_remove)
@@ -363,13 +352,13 @@ getLabelPCA <- function(n, var) {
 
 #getting labels of selected approach other than proclus and orclus
 getLabel <- function(approach, n) {
-  if (approach == "K-means") {
+  if (approach == "k-means") {
     set.seed(123)
     kmclust <- kmeans(df_noCorr_scaled, n)
     label <- kmclust$cluster
     
   }
-  else if (approach == "HK-means") {
+  else if (approach == "Hk-means") {
     set.seed(123)
     hkmclust <- hkmeans(df_noCorr_scaled, n)
     label <- hkmclust$cluster
@@ -398,12 +387,12 @@ ui <- fluidPage(pageWithSidebar(
       "Choose a clustering approach:",
       c(
         "none",
-        "K-means",
-        "HK-means",
+        "k-means",
+        "Hk-means",
         "Hierarchical",
         "Orclus",
         "Proclus",
-        "PCA K-means"
+        "PCA k-means"
       )
     ),
     
@@ -426,10 +415,10 @@ ui <- fluidPage(pageWithSidebar(
     ),
     conditionalPanel(
       condition = "input.Algorithm == 'Proclus'",
-      numericInput("avgdim", "Average dimensionality", 3, 3, 72)
+      numericInput("avgdim", "Average dimensionality",value = 30, 3, 3, 72)
     ),
     conditionalPanel(
-      condition = "input.Algorithm == 'PCA K-means'",
+      condition = "input.Algorithm == 'PCA k-means'",
       numericInput(
         "var",
         "Variance",
@@ -439,7 +428,7 @@ ui <- fluidPage(pageWithSidebar(
         step = 0.05
       )
     ),
-    fluidRow(column(2, verbatimTextOutput("value")))
+    fluidRow(column(2, verbatimTextOutput("value"))),width = 3
   ),
   mainPanel(
     navbarPage(
@@ -505,7 +494,7 @@ server <- function(input, output) {
         input$Algorithm,
         "Proclus" = getLabelproc(input$numClust, input$avgdim),
         "Orclus" = getLabelorc(input$numClust, input$findim, input$initclust),
-        "PCA K-means" = getLabelPCA(input$numClust, input$var),
+        "PCA k-means" = getLabelPCA(input$numClust, input$var),
         getLabel(input$Algorithm, input$numClust)
       )
     })
