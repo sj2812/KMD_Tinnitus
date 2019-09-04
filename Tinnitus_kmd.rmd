@@ -29,8 +29,12 @@ The project is organised as follows:
 * Visualisation
 * Evaluation
 
-```{r setup, include=TRUE, message=FALSE,warning=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
 remove(list=ls())
 gc(reset = TRUE)
 #User Configuration
@@ -71,8 +75,8 @@ avgDimProclus<-25
 #-----------------Orclus------------------------------------------------------------------#
 
 numClustOrclus<-2
-finalSubspaceDimOrclus<-20
-initialNumberOfClustersOrclus<-25
+finalSubspaceDimOrclus<-25
+initialNumberOfClustersOrclus<-20 
 #do you want to tune Orclus
 tuneOrclus<-TRUE
 
@@ -85,11 +89,11 @@ variancePCAKmeans<-0.7 #choose from 0.1 to 1.0
 
 ######## Do you want to validate the obtained DT using Random Forest #######
 valDTkmeans<-TRUE
-valDThkmeans<-TRUE
-valDThierarchical<-TRUE
-valDTProclus<-TRUE
-valDTOrclus<-TRUE
-valDTPCAKmeans<-TRUE
+valDThkmeans<-FALSE
+valDThierarchical<-FALSE
+valDTProclus<-FALSE
+valDTOrclus<-FALSE
+valDTPCAKmeans<-FALSE
 
 
 ```
@@ -108,6 +112,7 @@ library(mlbench)
 library(rJava)
 library(clValid)
 library(randomForest)
+library(factoextra)
 
 ```
 
@@ -234,7 +239,7 @@ correlations <- function(cor_threshold)
 ```
 ## Removal of correlated columns
 
-```{r}
+```{r warning=FALSE}
 ###################################### No correlated columns ####################################
 
 feature_remove <- correlations(correlationValue)
@@ -378,7 +383,7 @@ The following chunk tunes the hyper-parameters l (final cluster specific subspac
   }
    tune_lf_sparsity$mult <- tune_lf_sparsity$sparsity * tune_lf_sparsity$proj
   opt <- tune_lf_sparsity[which(tune_lf_sparsity$mult == min(tune_lf_sparsity$mult)),]
-  cat("Optimal value for sparsity is with k0 = ",opt$k,"average dimension = ",opt$dim,"gives sparcity coefficient = ",opt$sparsity,"and projected wss=",opt$within.projens)
+  cat("Optimal value for sparsity is with k0 = ",opt$k,"average dimension = ",opt$dim,"gives sparcity coefficient = ",opt$sparsity,"and projected wss=",opt$proj)
    return (tune_lf_sparsity)
 }
 if(tuneOrclus)
@@ -928,7 +933,7 @@ To compare the clustering results obtained from k-means, agglomerative hierarchi
 
 * Connectivity: The connectivity index measures the extent to which data points are placed in one cluster compared to its nearest neighbors. It ranges from zero to infinity. The lower the connectivity better are the results.
 
-* Compactness or cluster cohesion: Compactness is calculated by silhouette width which is the average of silhouette value of all observations. This value ranges from 1 to -1, where values closer to 1 mean the clusters are compact and closer to -1 mean poorly formed clusters.
+* Compactness or cluster cohesion: Measures how close are the objects within the same cluster. Smaller values indicate a better clustering structure.It is based on measures such as cluster-wise within average distances between the observations.
 
 ```{r Evaluation, echo=FALSE}
 evaluate<-function(labels,numclusters,approach){
