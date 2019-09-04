@@ -91,7 +91,6 @@ library(e1071)
 library(mlbench)
 library(rJava)
 library(diceR)
-library(sqldf)
 library(clValid)
 library(randomForest)
 
@@ -150,16 +149,16 @@ df_allF_scaled<-scale(df_allF)%>%data.frame()
 We will find out the correlated columns in the data and drop them
 
 ```{r Correlation}
-correlations <- function(corrval)
+correlations <- function(cor_threshold)
 {
   correlated_coloumns <- data.frame(F1 = character(),F2 = character())
   
-  #cat("\ncorrelation with 90%:\n")
+ 
   matriz_cor <- cor(df_allF,method = "spearman")
   
   
   for (i in 1:nrow(matriz_cor)){
-    correlations <-  which((abs(matriz_cor[i,]) > corrval) & (matriz_cor[i,] != 1))
+    correlations <-  which((abs(matriz_cor[i,]) > cor_threshold) & (matriz_cor[i,] != 1))
     matriz_cor[correlations,i] <- NA
     
     if(length(correlations)> 0){
@@ -168,6 +167,7 @@ correlations <- function(corrval)
       rownames(correlated_coloumns) <- NULL
     }
   }
+  
   
   x <- as.list(sqldf("SELECT distinct(F1) as feat FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns") )
   count <- data.frame(matrix(ncol = length(x$feat), nrow = 0))
@@ -182,7 +182,7 @@ correlations <- function(corrval)
   }
   count <- as.data.frame(t(apply(count, 1, FUN=function(x) sort(x, decreasing=TRUE))))
   
-  feature_remove <- c()
+  x <- c()
   k <- 1
   
   for ( i in 1:length(colnames(count))) {
@@ -191,25 +191,29 @@ correlations <- function(corrval)
         if(colnames(count[i]) == correlated_coloumns$F1[j])
         {
           num <- which(colnames(count) == correlated_coloumns$F2[j])
-          feature_remove[k] <- colnames(count[num])
-          count <- select(count,-num)
-          k <- k + 1
+          if((correlated_coloumns$F2[j] %in% x) == FALSE) {
+            x[k] <- colnames(count[num])
+            count <- select(count,-num)
+            k <- k + 1 
+          }
         }
       }
       for (j in 1:length(correlated_coloumns$F2)) {
         if(colnames(count[i]) == correlated_coloumns$F2[j])
         {
           num <- which(colnames(count) == correlated_coloumns$F1[j])
-          feature_remove[k] <- colnames(count[num])
-          count <- select(count,-num)
-          k <- k + 1
+          if((correlated_coloumns$F1[j] %in% x) == FALSE) {
+            x[k] <- colnames(count[num])
+            count <- select(count,-num)
+            k <- k + 1 
+          }
         }
       }
     }
     else 
       break()
   }
-  return(feature_remove)
+  return(x)
 }
 
 
