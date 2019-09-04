@@ -49,8 +49,8 @@ df_allF_scaled<-scale(df_allF)%>%data.frame()
 
 library(sqldf)
 
-correlations <- function()
-{
+correlations <- function(cor_threshold) {
+
   correlated_coloumns <- data.frame(F1 = character(),F2 = character())
   
   #cat("\ncorrelation with 90%:\n")
@@ -58,7 +58,7 @@ correlations <- function()
   
   
   for (i in 1:nrow(matriz_cor)){
-    correlations <-  which((abs(matriz_cor[i,]) > 0.9) & (matriz_cor[i,] != 1))
+    correlations <-  which((abs(matriz_cor[i,]) > cor_threshold) & (matriz_cor[i,] != 1))
     matriz_cor[correlations,i] <- NA
     
     if(length(correlations)> 0){
@@ -68,10 +68,6 @@ correlations <- function()
     }
   }
   
-  
-  # correlated_coloumns <- as.data.frame((correlated_coloumns))
-  # correlated_coloumns$F1 <- as.character(correlated_coloumns$F1)
-  # correlated_coloumns$F2 <- as.character(correlated_coloumns$F2)
   
   x <- as.list(sqldf("SELECT distinct(F1) as feat FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns") )
   count <- data.frame(matrix(ncol = length(x$feat), nrow = 0))
@@ -95,18 +91,22 @@ correlations <- function()
         if(colnames(count[i]) == correlated_coloumns$F1[j])
         {
           num <- which(colnames(count) == correlated_coloumns$F2[j])
-          x[k] <- colnames(count[num])
-          count <- select(count,-num)
-          k <- k + 1
+          if((correlated_coloumns$F2[j] %in% x) == FALSE) {
+            x[k] <- colnames(count[num])
+            count <- select(count,-num)
+            k <- k + 1 
+          }
         }
       }
       for (j in 1:length(correlated_coloumns$F2)) {
         if(colnames(count[i]) == correlated_coloumns$F2[j])
         {
           num <- which(colnames(count) == correlated_coloumns$F1[j])
-          x[k] <- colnames(count[num])
-          count <- select(count,-num)
-          k <- k + 1
+          if((correlated_coloumns$F1[j] %in% x) == FALSE) {
+            x[k] <- colnames(count[num])
+            count <- select(count,-num)
+            k <- k + 1 
+          }
         }
       }
     }
@@ -115,9 +115,10 @@ correlations <- function()
   }
   return(x)
 }
-###################################### No correlated columns ####################################
+cor_threshold <- 0.9
 
-x <- correlations()
+x <- correlations(cor_threshold)  
+  
 #dropping the columns
 df_noCorr <- select(df_allF,-x)
 
