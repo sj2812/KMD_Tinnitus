@@ -6,6 +6,7 @@ output: html_document
 ---
 
 ## Motivation
+
 * Tinnitus is a highly common health problem which severely affects people. As a Tinnitus patient, people need to fill many
 questionnaires which can be tiring.
 
@@ -14,6 +15,7 @@ questionnaires which can be tiring.
 * Understanding the sub categories would also help to identify questionnaires which are only relevant to these sub categories and thus reduce the number questions patients might have to fill.
 
 ## Problem Statement
+
 1) To identify relevant sub-categories of Tinnitus condition
 
 2) To represent/describe the identified clusters and assign most relevant questionnaires respectively.
@@ -23,8 +25,8 @@ questionnaires which can be tiring.
 The project is organised as follows:
 
 * Data preprocessing
-* Global Clustering
-* Subspace Clustering
+* Clustering
+* Visualisation
 * Evaluation
 
 ```{r setup, include=TRUE, message=FALSE,warning=FALSE}
@@ -33,28 +35,40 @@ remove(list=ls())
 gc(reset = TRUE)
 #User Configuration
 
+#-----------------Data Pre-processing------------------------------------------------------#
+dataFilePath<-"190426_charite_tinnitus.rds"
 correlationValue<-0.9  #choose from 0.1 to 1.0
 
-#choose number of clusters  from 2 to 10
+
+
+#----------------Cluster Configurations----------------------------------------------------#
+
+####################  choose number of clusters  from 2 to 10  ##################
+
+#-----------------K-means------------------------------------------------------------------#
 
 numClustKmeans<-2
 
+#-----------------Hierarchical-------------------------------------------------------------#
 
 numClusthierarchical<-2
 #clustering method("ward","average","single","complete","weighted")
 clustering_method_hierarchical<-"ward"
-#do you want to tune hierarchical clustering to get the best
-tuneHierarchical<-TRUE
+#do you want to tune hierarchical clustering to get the best method
+tuneHierarchical<-FALSE
 numClusthKmeans<-2
 clustering_method_hkmeans<-"ward"
 
+#-----------------Proclus-----------------------------------------------------------------#
 
 numClustProclus<-4
 #Do you want to reproduce the proclus results that were described in the report(True/False)
 reproduceProclusResults<-FALSE
-#path where the proclus result object is stored
+######### path where the proclus result object is stored #########
 path<-"data 2 .Rdata"
 avgDimProclus<-25
+
+#-----------------Orclus------------------------------------------------------------------#
 
 numClustOrclus<-2
 finalSubspaceDimOrclus<-20
@@ -62,10 +76,14 @@ initialNumberOfClustersOrclus<-25
 #do you want to tune Orclus
 tuneOrclus<-TRUE
 
+#-----------------PCA K-means-------------------------------------------------------------#
+
 numClustPCAKmeans<-2
 variancePCAKmeans<-0.7 #choose from 0.1 to 1.0
 
-#Do you want to validate the obtained DT using Random Forest
+#-----------------DT Validation-----------------------------------------------------------#
+
+######## Do you want to validate the obtained DT using Random Forest #######
 valDTkmeans<-TRUE
 valDThkmeans<-TRUE
 valDThierarchical<-TRUE
@@ -81,16 +99,13 @@ Let us first load all necessary libraries for this project
 library(dplyr)
 library(tidyverse)  
 library(cluster)    
-library(factoextra) 
 library(dendextend)
 library(r2d3)
-library(sqldf)
 library(caret)
 library(rpart.plot)
 library(e1071)
 library(mlbench)
 library(rJava)
-library(diceR)
 library(clValid)
 library(randomForest)
 
@@ -98,10 +113,10 @@ library(randomForest)
 
 ## Data preprocessing 
 
-Now we will step by step do the preprocessing of given data
+Now we will step by step do the preprocessing of given data.
 
 ```{r Dataframe}
-df <- read_rds("190426_charite_tinnitus.rds") %>%
+df <- read_rds(dataFilePath) %>%
   arrange(.testdatum) %>%
   group_by(.jour_nr) %>%
   slice(1) %>%
@@ -135,41 +150,40 @@ df <- read_rds("190426_charite_tinnitus.rds") %>%
          starts_with("tlq"), -tlq_timestamp
   ) %>%
   drop_na()
-originaldf <- read_rds("190426_charite_tinnitus.rds")
+originaldf <- read_rds(dataFilePath)
 ```
+
 Now lets remove the identifier as it will not be useful for analysis.
 
 ```{r Dataframe all features}
 df_allF <- select(df,-c(.jour_nr))
 
-#Data frame with all features "Scaled" except journ no
+#Data frame with all features Scaled except ".journ_no"
 df_allF_scaled<-scale(df_allF)%>%data.frame()
 ```
 
-We will find out the correlated columns in the data and drop them
+We will find out the correlated columns in the data and drop them.
 
 ```{r Correlation}
 correlations <- function(cor_threshold)
 {
   correlated_coloumns <- data.frame(F1 = character(),F2 = character())
-  
  
   matriz_cor <- cor(df_allF,method = "spearman")
-  
   
   for (i in 1:nrow(matriz_cor)){
     correlations <-  which((abs(matriz_cor[i,]) > cor_threshold) & (matriz_cor[i,] != 1))
     matriz_cor[correlations,i] <- NA
     
     if(length(correlations)> 0){
-      #lapply(correlations,FUN =  function(x) (cat("\t",paste(colnames(test)[i], "with",colnames(test)[x]), "\n")))
+      
       correlated_coloumns <-  rbind(correlated_coloumns,data.frame(F1=colnames(df_allF)[i],F2=colnames(df_allF)[correlations]))
       rownames(correlated_coloumns) <- NULL
     }
   }
   
   
-  x <- as.list(sqldf("SELECT distinct(F1) as feat FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns") )
+  x <- as.list(sqldf::sqldf("SELECT distinct(F1) as feat FROM correlated_coloumns UNION SELECT distinct(F2) FROM correlated_coloumns") )
   count <- data.frame(matrix(ncol = length(x$feat), nrow = 0))
   count[1,] <- 0
   colnames(count) <- x$feat
@@ -227,6 +241,7 @@ feature_remove <- correlations(correlationValue)
 #dropping the columns
 df_noCorr <- select(df_allF,-feature_remove)
 print("There are no correlated columns")
+
 #Data frame with reduced features "Scaled"
 df_noCorr_scaled <- scale(df_noCorr)%>%data.frame()
 ```
@@ -294,19 +309,10 @@ boxplot(totwss~k, data = wss.boot, xlab = "k values", ylab = "totwss", main = "B
 
 ## Tuning for best hierarchical clustering method
 
-Hierarchical clustering can be done in two ways :
-1) Top Down : Start with the entire data as a cluster and break them down until each point is a cluster in itself.
-2) Bottom up : Start from individual points as clusters and merge them based on similarities until one cluster if formed.
-
 There are different ways to calculate the distance/ similarity between individual points and in between the clusters which can be a very important factor in deciding the final cluster results.
-
 So we first create a list of these methods and then create clusters for each combination.
 
 Then we can calculate the clusters. The ac value of each cluster gives the quality/ tightness of each cluster. The closer the value is to 1 the better are the results.
-
-"the agglomerative coefficient, measuring the clustering structure of the dataset.
-
-For each observation i, denote by m(i) its dissimilarity to the first cluster it is merged with, divided by the dissimilarity of the merger in the final step of the algorithm. The ac is the average of all 1 - m(i). It can also be seen as the average width (or the percentage filled) of the banner plot. Because ac grows with the number of observations, this measure should not be used to compare datasets of very different sizes."
 ```{r Hierarchical Tune}
 tunehierarchical <- function() {
   set.seed(123)
@@ -330,15 +336,10 @@ tunehierarchical <- function() {
     {
       hc <- agnes(dist_matrix, method = x)
       ac <- hc$ac
-      title <-
-        sprintf("Distance: %s,Inter cluster Distance: %s, ac value: %f",
-                dist_m,
-                x,
-                ac)
-      pltree(hc,
-             cex = 0.6,
-             hang = -1,
-             main = title)
+      title <- sprintf("Distance: %s,Inter cluster Distance: %s, ac value: %f",  dist_m, x, ac)
+      pltree(hc, cex = 0.6, hang = -1, main = title)
+      
+      
       if (!is.nan(ac) && ac > 0.95)
       {
         print(title)
@@ -352,7 +353,8 @@ if(tuneHierarchical)
   tunehierarchical()
 ```
 ## Orclus Tuning
-The following chunk tunes the hyper-parameters l(final cluster specific subspaces dimension) and k0(initial number of clusters) by the “sparsity.coefficient” and the “within.projenss”measures obtained along with the clustering result where lower values for sparcity coefficientand wss are expected.
+
+The following chunk tunes the hyper-parameters l (final cluster specific subspaces dimension) and k0 (initial number of clusters) by the “sparsity.coefficient” and the “within.projenss” measures obtained along with the clustering result where lower values for sparcity coefficient and wss are expected.
 ```{r OrclusTune, warning=FALSE}
 
 #Represents the tuning of clusters according to quality measures
@@ -374,47 +376,46 @@ The following chunk tunes the hyper-parameters l(final cluster specific subspace
       j <- j+1
     }
   }
+   tune_lf_sparsity$mult <- tune_lf_sparsity$sparsity * tune_lf_sparsity$proj
+  opt <- tune_lf_sparsity[which(tune_lf_sparsity$mult == min(tune_lf_sparsity$mult)),]
+  cat("Optimal value for sparsity is with k0 = ",opt$k,"average dimension = ",opt$dim,"gives sparcity coefficient = ",opt$sparsity,"and projected wss=",opt$within.projens)
    return (tune_lf_sparsity)
 }
 if(tuneOrclus)
   tune_orclus(numClustOrclus)
 
 ```
+
 ## Visualisation
 
-Creating a summary data frame for capturing population mean
+Creating a summary data frame for capturing population mean.
 ```{r}
 feature_summary_scaled<-data.frame(df_allF_scaled%>%
                                      summarise_each(mean))
 feature_summary<-data.frame(df_allF%>%
                               summarise_each(mean))
 ```
+
+
 For visualisation of clustering results we choose radial chart.
 To generate this radial chart we need to format the data in a data structure suitable for plotting.
 The bar height is the scaled value of the features of a cluster. The tooltip gives extra information about the actual feature value and the population mean for the feature.
 ```{r Visualisation}
-#Finally creating a data frame which can be used for the visualization
+#Creating a data frame which can be used for the visualization
 options(scipen = 999)
 createPlotData <- function(algo_name,
                            clus_name,
                            cluster_scaled,
                            cluster)
 {
+  cluster_plot_data <- 
+    rbind(colnames(cluster[-1]), cluster_scaled[-1], feature_summary, cluster[-1]) 
+  
+  rownames(cluster_plot_data) <- 
+    c( "feature", "scaled_cluster_feature_value", "population_mean", "cluster_feature_value")
+  
   cluster_plot_data <-
-    rbind(colnames(cluster[-1]),
-          cluster_scaled[-1],
-          feature_summary,
-          cluster[-1])
-  rownames(cluster_plot_data) <-
-    c(
-      "feature",
-      "scaled_cluster_feature_value",
-      "population_mean",
-      "cluster_feature_value"
-    )
-  cluster_plot_data <-
-    t(cluster_plot_data) %>% data.frame() %>% mutate(algorithm = algo_name, cluster_name =
-                                                       clus_name)
+    t(cluster_plot_data) %>% data.frame() %>% mutate(algorithm = algo_name, cluster_name = clus_name)
   return(cluster_plot_data)
 }
 
@@ -440,15 +441,13 @@ getPlotData <- function(algo_name, final_labels, no_of_clusters)
   {
     clus_name <- paste("Type ", i)
     plotData[[i]] <-
-      createPlotData(algo_name,
-                     clus_name,
-                     cluster_features_scaled[i, ],
-                     cluster_features[i, ])
+      createPlotData(algo_name, clus_name, cluster_features_scaled[i, ], cluster_features[i, ])
   }
   return(plotData)
   
 }
 
+#Needed because in Proclus we just show the selected dimensions
 
 getProclusPlotData <- function(algo_name, proclus_cluster, cluster_num)
 {
@@ -472,35 +471,26 @@ getProclusPlotData <- function(algo_name, proclus_cluster, cluster_num)
                                     summarise_each(mean))
   p_feature_summary <-
     p_feature_summary[, which(proclus_cluster[[cluster_num]][["subspace"]] == TRUE)]
+  
   plotData <- list()
+  
   clus_name <- paste("Type ", cluster_num)
   cluster_plot_data <-
-    rbind(
-      colnames(cluster_feature[-1]),
-      cluster_feature_scaled[-1],
-      p_feature_summary,
-      cluster_feature[-1]
-    )
-  rownames(cluster_plot_data) <-
-    c(
-      "feature",
-      "scaled_cluster_feature_value",
-      "population_mean",
-      "cluster_feature_value"
-    )
+    rbind( colnames(cluster_feature[-1]), cluster_feature_scaled[-1], p_feature_summary, cluster_feature[-1])
+  rownames(cluster_plot_data) <-  c( "feature", "scaled_cluster_feature_value", "population_mean", "cluster_feature_value" )
+  
   cluster_plot_data <-
-    t(cluster_plot_data) %>% data.frame() %>% mutate(algorithm = algo_name, cluster_name =
-                                                       clus_name)
+    t(cluster_plot_data) %>% data.frame() %>% mutate(algorithm = algo_name, cluster_name = clus_name)
+  
   return(cluster_plot_data)
 }
 
 ```
 ## Decision Tree
 
-Now we have plotted all the feature values for each cluster. However for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use supervised techniques.
+Now we have all the feature values for each cluster. However, for each cluster there are only a few features which clearly distinguish it from other clusters. To find out which features and their respective values are responsible to identify a cluster we can use interpretable surrogate models.
 Let us now use a Decision Tree algorithm to identify which features are the most important to lead us to get our cluster labels as leaf nodes.
 
-Now to get the decision tree as a classifier intead of a regressor we need to make the predicting variable as non numeric.
 ```{r}
 createDT<-function(final_labels,remove_na)
 { 
@@ -525,21 +515,13 @@ createDT<-function(final_labels,remove_na)
                      trControl=trctrl,
                      tuneLength = 10)
   
-  prp(
-    dtree_fit$finalModel,
-    extra = 2,
-    box.palette = "Reds",
-    tweak = 1.5,
-    varlen
-    = -10,
-    branch.type = 5
+  prp( dtree_fit$finalModel, extra = 2, box.palette = "Reds", tweak = 1.5, varlen = -10, branch.type = 5
   )
 }
 ```
 ## Random Forest
 
-Supervised phase to obtain the important features using random forest. This chunk  does the parameter tuning and gives the best mtry and ntree parameters. mtry is the number of variables randomly sampled as candidates at each split.
-We then apply random forest with the best paramters. 
+We can use random forest for validating the decision tree obtained. This chunk  does the parameter tuning and gives the best mtry and ntree values. mtry is the number of variables randomly sampled as candidates at each split and ntree is the number of trees created by the function. We then apply random forest with the best paramters. 
 The features are then ordered as per their mean decrease accuracy.
 ```{r RF}
 
@@ -557,58 +539,34 @@ tuneRandomForest <- function(labels, remove_na) {
   }
   x <- data[-ncol(data)]
   y <- data$label
+  
+  
   #tuning of rf
-  customRF <-
-    list(type = "Classification",
-         library = "randomForest",
-         loop = NULL)
-  customRF$parameters <-
-    data.frame(
-      parameter = c("mtry", "ntree"),
-      class = rep("numeric", 2),
-      label = c("mtry", "ntree")
+  customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+  
+  customRF$parameters <- data.frame( parameter = c("mtry", "ntree"),  class = rep("numeric", 2),label = c("mtry", "ntree")
     )
+  
   customRF$grid <- function(x, y, len = NULL, search = "grid") {
   }
-  customRF$fit <-
-    function(x,
-             y,
-             wts,
-             param,
-             lev,
-             last,
-             weights,
-             classProbs,
-             ...) {
+  
+  customRF$fit <-function(x,y, wts, param, lev, last, weights, classProbs, ...) {
       randomForest(x, y, mtry = param$mtry, ntree = param$ntree, ...)
-    }
-  customRF$predict <-
-    function(modelFit,
-             newdata,
-             preProc = NULL,
-             submodels = NULL)
-      predict(modelFit, newdata)
-  customRF$prob <-
-    function(modelFit,
-             newdata,
-             preProc = NULL,
-             submodels = NULL)
-      predict(modelFit, newdata, type = "prob")
+  }
+  
+  customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata)
+  
+  customRF$prob <-  function(modelFit, newdata, preProc = NULL, submodels = NULL)
+  predict(modelFit, newdata, type = "prob")
+  
+  
   # train model
-  control <- trainControl(method = "repeatedcv",
-                          number = 5,
-                          repeats = 2)
+  control <- trainControl(method = "repeatedcv",number = 5, repeats = 2)
   tunegrid <- expand.grid(.mtry = c(5:12), .ntree = c(500, 1000,1500))
   set.seed(123)
-  custom <-
-    train(
-      label ~ .,
-      data = data,
-      method = customRF,
-      tuneGrid = tunegrid,
-      trControl = control
-    )
-  #summary(custom)
+  custom <-  train( label ~ ., data = data, method = customRF, tuneGrid = tunegrid, trControl = control)
+  
   plot(custom)
   print(custom)
   return(custom$bestTune)
@@ -617,35 +575,24 @@ tuneRandomForest <- function(labels, remove_na) {
 
 
 ##applying random forest
-applyrf <- function(labels,
-                    numClusters,
-                    ntree,
-                    mtry,
-                    remove_na) {
+applyrf <- function(labels, numClusters, ntree, mtry, remove_na) {
   # labelling the records
   df_allF_labeled <- df_allF %>%
     mutate(label = labels)
   df_string_labeled <- df_allF_labeled
   df_string_labeled$label <- as.factor(df_string_labeled$label)
-  #Adding "Type" to each cluster number to make it non numeric
-  
+
   if (remove_na)
   {
-    df_string_labeled <-
-      df_string_labeled[-c(which(is.na(df_string_labeled$label))), ]
+    df_string_labeled <- df_string_labeled[-c(which(is.na(df_string_labeled$label))), ]
   }
   
-  data.rf <- randomForest(
-      formula = label ~ .,
-      data = df_string_labeled,
-      importance = TRUE,
-      ntree = ntree,
-      mtry = mtry,
-      proximity = TRUE
-    )
+  data.rf <- randomForest(formula = label ~ .,data = df_string_labeled,importance = TRUE,ntree = ntree,mtry = mtry,
+      proximity = TRUE)
   print(data.rf)
   plot(data.rf)
   varImpPlot(data.rf)  #the first graph shows how worse the model will perfrom after removing each variable and second shows how pure the nodes are at the end of the tree
+  
   impfeat <- importance(data.rf)
   impfeatdf <- data.frame(impfeat)
   impfeatorder <- impfeatdf[order(-impfeatdf$MeanDecreaseAccuracy), ]
@@ -653,27 +600,44 @@ applyrf <- function(labels,
 }
 
 ```
+
+## PCA-Kmeans
+Prinicipal Component Analysis is used for High Dimensional Dataset to convert the possibly correlated features into linearly uncorrelated variables called Principal Components (PCs). The first Principal Component (PC) explains the most amount of variance in the data. The PCs are arranged in the decreasing order of variance explained. This can be seen in Scree Plots in the following chunks. To explain certain amount of variance of the data, we need to choose the subsequent amount of the PC number. After selecting first n PCs, we need to save that in another dataframe and then we can perform our clustering algorithm on the new transformed data.
+
 The following chunk returns the number of principle components for a desired variance.
 ```{r}
 getnumberPcs<-function(variance,km.pc){
   PCvar <- as.data.frame(t(summary(km.pc)$importance[3,]))
-j <- 0
+PC_num <- 0
 for(i in seq(1:ncol(PCvar))){
     if(PCvar[1,i]<=variance)
     { 
-      j <- j+1
+      PC_num <- PC_num+1
     }
 }
-return(j)
+return(PC_num)
 }
 
 ```
-
-
 ## Fetching labels for Performing Radial Chart Visualisation and Decision Tree for selected Cluster numbers
-First the Labels are fetched for each clustering algorithm, which is then passed into the initVis function alongwith the cluster number to create Radial Chart visualisations. Decision tree function is then called to visualize the decision points that can be used by the user to ask the relevant questions to come to a sub-group of Tinnitus.
+
+First the labels are fetched for each clustering algorithm, which is then passed into the initVis function alongwith the cluster number to create Radial Chart visualisations. Decision tree function is then called to visualize the decision points that can be used by the user to ask the relevant questions to come to a sub-group of Tinnitus.
+
+# Global Clustering Methods
+
+By global clustering we analyze the data as a whole. In other words, we consider all the dimensions in the data set as is without any form of dimension reductions.
+
+# Subspace Clustering Methods
+
+Subspace clustering tries to solve the problem of high dimensional data being nearly equidistant from each other by finding the clusters in different subspaces.
+
+Proclus: Proclus can produce cluster with different number of selected dimensions as it tries to maintain the average dimensions per cluster given by the user. This algorithm accepts mainly two user specified hyper-parameters, namely K number of clusters and average dimensionality per cluster l.
+
+Orclus: Many datasets contain attribute correlations. Orclus is used to tackle this by extending Proclus to include search for non-axis parallel subspaces. This is done by by building new dimensions which for a particular cluster using covariance matrix. This algorithm accepts mainly three hyper-parameters, namely final number of clusters k, final number of dimensions per cluster l and initial number of clusters k0.
 
 ```{r}
+
+#----------------------------Global---------------------------------------#
 getKmeanslabels<-function(numClust){
   set.seed(123)
   kmclust <- kmeans(df_noCorr_scaled, numClust)
@@ -698,6 +662,7 @@ gethierarchicallabels<-function(numClust,clustmethod){
   return(list("labels"=h_labels,"numClust"=numClust))
 }
    
+#----------------------------Subspace-------------------------------------#
 
 getprocluslabels<-function(numClust,avgdim){
   set.seed(123)
@@ -721,7 +686,8 @@ getprocluslabels<-function(numClust,avgdim){
   return(list("labels"=ok_labels,"numClust"=numClust))
 }
    
-
+#----------------------------PCA---------------------------------------#
+ 
 getpcakmeanslabels<-function(numClust,variance){
   set.seed(123)
   km.pc <- prcomp(df_noCorr_scaled, center = TRUE)
@@ -738,7 +704,7 @@ getpcakmeanslabels<-function(numClust,variance){
   
   PC_num <- getnumberPcs(variance,km.pc)
   cumpro <- cumsum(km.pc$sdev^2 / sum(km.pc$sdev^2))
-  plot(cumpro[0:maxPC], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Score plot of      variance =", variance*100, "% at PC =",PC_num))
+  plot(cumpro[0:maxPC], xlab = "PC Numbers", ylab = "Amount of explained variance", main = paste("Scree plot of variance =", variance*100,"% at PC =",PC_num))
   abline(v = PC_num, col="blue", lty=5)
   abline(h = variance, col="blue", lty=5)
   legend("topleft", legend=c(paste("Cut-off @ PC",PC_num)), col=c("blue"), lty=5, cex=0.6)
@@ -751,8 +717,9 @@ getpcakmeanslabels<-function(numClust,variance){
 ```
 
 ## Clustering implementation
-These function calls are used to get the cluster assignment of the approches.User can store the proclus result object to a file for future reuse.
-```{r} 
+
+These function calls are used to get the cluster assignment of the approches. User can store the Proclus result object to a file for future reuse as Proclus results are not reproducable.
+```{r warning=FALSE} 
 
   kmeansres<-getKmeanslabels(numClustKmeans)
 
@@ -775,11 +742,12 @@ These function calls are used to get the cluster assignment of the approches.Use
   
 ```
 ## Output
-The output in the form of decision trees and radil charts can be seen after running this chunk for number of clusters from 2 to 10
+
+The output in the form of decision trees and radial charts can be seen after running this chunk for number of clusters from 2 to 10.
 ```{r}
  message("Note:The radial charts can be seen only for 10 clusters")
 #kmeans
-   cluster_plot_data<-getPlotData("Kmeans",kmeansres$labels,kmeansres$numClust)
+   cluster_plot_data<-getPlotData("k-means",kmeansres$labels,kmeansres$numClust)
    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 
@@ -802,7 +770,7 @@ The output in the form of decision trees and radil charts can be seen after runn
   createDT(kmeansres$labels,0)
   
   #hierarchical
-  cluster_plot_data<-getPlotData("hierarchical",hierarchicalres$labels,hierarchicalres$numClust)
+  cluster_plot_data<-getPlotData("Hierarchical",hierarchicalres$labels,hierarchicalres$numClust)
    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 
@@ -825,7 +793,7 @@ The output in the form of decision trees and radil charts can be seen after runn
   createDT(hierarchicalres$labels,0)
   
   #hkmeans
-  cluster_plot_data<-getPlotData("hKmeans",hkmeansres$labels,hkmeansres$numClust)
+  cluster_plot_data<-getPlotData("Hk-means",hkmeansres$labels,hkmeansres$numClust)
    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 
@@ -847,7 +815,7 @@ The output in the form of decision trees and radil charts can be seen after runn
    r2d3(data = cluster_plot_data[[10]], script = "cluster_chart.js",viewer ="internal")
   createDT(hkmeansres$labels,0)
   
-  #proclus
+  #Proclus
   
    r2d3(data = getProclusPlotData("Proclus",proclusres$objradial,1), script = "cluster_chart.js",viewer ="internal")
    r2d3(data = getProclusPlotData("Proclus",proclusres$objradial,2), script = "cluster_chart.js",viewer ="internal")
@@ -870,8 +838,8 @@ The output in the form of decision trees and radil charts can be seen after runn
    r2d3(data = getProclusPlotData("Proclus",proclusres$objradial,10), script = "cluster_chart.js",viewer ="internal")
   createDT(proclusres$labels,1)
   
-  #orclus
-  cluster_plot_data<-getPlotData("orclus",orclusres$labels,orclusres$numClust)
+  #Orclus
+  cluster_plot_data<-getPlotData("Orclus",orclusres$labels,orclusres$numClust)
    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 
@@ -894,7 +862,7 @@ The output in the form of decision trees and radil charts can be seen after runn
   createDT(orclusres$labels,0)
   
   #pcakmeans
-  cluster_plot_data<-getPlotData("pca-Kmeans",pckmres$labels,pckmres$numClust)
+  cluster_plot_data<-getPlotData("PCA-Kmeans",pckmres$labels,pckmres$numClust)
    r2d3(data = cluster_plot_data[[1]], script = "cluster_chart.js",viewer ="internal")
    r2d3(data = cluster_plot_data[[2]], script = "cluster_chart.js",viewer ="internal")
 
@@ -917,11 +885,11 @@ The output in the form of decision trees and radil charts can be seen after runn
   createDT(pckmres$labels,0)
 ```
 ## Validation of decision tree 
-As this chunk does the tuning of random forest, it may take some time
-To be run after creating labels below. Used for building Random Forest to validate the decision trees along with the tuning of parameters of random forest.
+Note: As this chunk does the tuning of random forest, it may take some time. 
+
+This chunk is used to display results of Random Forest which can be used for DT validation. The optimal parameters obtained after tuning are used for creating random forest for each method.
 
 ```{r RandomForest}
-##function call
 
 if(valDTkmeans){
  bestparamdf<-tuneRandomForest(kmeansres$labels,0)
@@ -941,7 +909,7 @@ if(valDTProclus){
 }
 if(valDTOrclus){
   bestparamdf<-tuneRandomForest(orclusres$labels,0)
-  applyrf(orclusres$labels,num,bestparamdf$ntree,bestparamdf$mtry,0)
+  applyrf(orclusres$labels,numClustOrclus,bestparamdf$ntree,bestparamdf$mtry,0)
 }
 if(valDTPCAKmeans){
   bestparamdf<-tuneRandomForest(pckmres$labels,0)
@@ -952,14 +920,15 @@ if(valDTPCAKmeans){
 
 ```
 
-## Evaluation :
+## Evaluation:
+
 To compare the clustering results obtained from k-means, agglomerative hierarchical clustering and Hk-means clustering  
 
 * Dunn Index: Dunn Index calculates the ratio of the smallest distance between the points in different clusters to the largest distance between the points within the cluster. Higher value for Dunn Index is desirable. Dunn Index ranges from 0 to 1.
 
-* Connectivity:The connectivity index measures the extent to which data points are placed in one cluster compared to its nearest neighbors. It ranges from zero to infinity. The lower the connectivity better are the results.
+* Connectivity: The connectivity index measures the extent to which data points are placed in one cluster compared to its nearest neighbors. It ranges from zero to infinity. The lower the connectivity better are the results.
 
-* Compactness or cluster cohesion: Compactness is calculated by Silhouette width which is the average of silhouette value of all observations. This value ranges from 1 to -1, where values closer to 1 mean the clusters are compact and closer to -1 mean poorly formed clusters.
+* Compactness or cluster cohesion: Compactness is calculated by silhouette width which is the average of silhouette value of all observations. This value ranges from 1 to -1, where values closer to 1 mean the clusters are compact and closer to -1 mean poorly formed clusters.
 
 ```{r Evaluation, echo=FALSE}
 evaluate<-function(labels,numclusters,approach){
@@ -969,7 +938,7 @@ evaluate<-function(labels,numclusters,approach){
   result_set[2]<-numclusters
   result_set[3]<-dunn(clusters = labels, Data=df_allF_scaled)
   result_set[4]<-connectivity(distance = NULL, labels, Data = df_allF_scaled, neighbSize = 10, method = "euclidean")
-  result_set[5]<-compactness(df_allF_scaled, labels)
+  result_set[5]<-diceR::compactness(df_allF_scaled, labels)
   return(result_set)
   
 }
